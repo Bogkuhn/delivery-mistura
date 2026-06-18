@@ -2186,16 +2186,18 @@ function sendWhatsapp() {
 //  NAVIGATION
 // ============================================================
 function goToStep(n) {
-  for (let i = 1; i <= 6; i++) {
-    document.getElementById('step' + i).style.display = i === n ? 'block' : 'none';
+  for (let i = 1; i <= 7; i++) {
+    const sEl = document.getElementById('step' + i);
+    if (sEl) sEl.style.display = i === n ? 'block' : 'none';
   }
   updateProgress(n);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function updateProgress(current) {
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= 7; i++) {
     const dot = document.getElementById('prog' + i);
+    if (!dot) continue;
     dot.classList.remove('active', 'done');
     if (i < current) dot.classList.add('done');
     else if (i === current) dot.classList.add('active');
