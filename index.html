@@ -680,6 +680,10 @@
       <div class="dot-circle">✓</div>
       <div class="dot-label">Resumo</div>
     </div>
+    <div class="step-dot" id="prog7">
+      <div class="dot-circle">&#10003;</div>
+      <div class="dot-label">Resumo</div>
+    </div>
   </div>
 </div>
 
@@ -771,8 +775,75 @@
     </div>
   </div>
 
-  <!-- STEP 2: Barris -->
+  <!-- STEP 2: Endereço do Evento -->
   <div id="step2" class="step-content" style="display:none;">
+    <div class="card">
+      <h2 class="card-title">Endereço do Evento 📍</h2>
+      <p class="card-subtitle">Informe onde será realizado o evento.</p>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:24px 0;">
+      <h3 style="font-family:'Playfair Display',serif;font-size:18px;margin-bottom:16px;">Endereço do Evento</h3>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">CEP <span class="required">*</span></label>
+          <input type="text" class="form-input" id="cep" placeholder="00000-000" oninput="maskCep(this)" onblur="buscarCep()" maxlength="9">
+          <div class="form-error" id="err-cep">CEP inválido.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Número <span class="required">*</span></label>
+          <input type="text" class="form-input" id="numero" placeholder="Nº">
+          <div class="form-error" id="err-num">Número é obrigatório.</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Logradouro <span class="required">*</span></label>
+        <input type="text" class="form-input" id="logradouro" placeholder="Rua, Avenida...">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Bairro <span class="required">*</span></label>
+          <input type="text" class="form-input" id="bairro" placeholder="Bairro">
+          <div class="form-error" id="err-bairro">Bairro é obrigatório.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cidade / Estado</label>
+          <input type="text" class="form-input" id="cidadeEstado" placeholder="Cidade – UF">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Complemento</label>
+        <input type="text" class="form-input" id="complemento" placeholder="Apto, bloco, referência...">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Local de Instalação da Chopeira <span class="required">*</span></label>
+        <select class="form-select" id="localInstalacao">
+          <option value="">Selecione o local</option>
+          <option value="Apartamento">Apartamento</option>
+          <option value="Casa">Casa</option>
+          <option value="Play">Play</option>
+          <option value="Churrasqueira">Churrasqueira</option>
+          <option value="Salão de Festas">Salão de Festas</option>
+          <option value="Outros">Outros</option>
+        </select>
+        <div class="form-error" id="err-local">Selecione o local de instalação.</div>
+      </div>
+
+      <div id="freight-notice" class="info-box" style="display:none;border-left-color:#C8922A;color:#5A4A2A;"></div>
+
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="goToStep(1)">← Voltar</button>
+        <button class="btn-primary" onclick="goToStep3()">Continuar →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Barris -->
+  <div id="step3" class="step-content" style="display:none;">
     <div class="card">
       <h2 class="card-title">Escolha as cervejas</h2>
       <p class="card-subtitle">Monte seu pedido! Pedidos com mais de um barril têm desconto! <strong>Pedido mínimo de 30 litros.</strong></p>
@@ -895,14 +966,14 @@
         <div class="subtotal-row total"><span>Subtotal do Pedido</span><span id="sub-total">R$ 0,00</span></div>
       </div>
       <div class="btn-row">
-        <button class="btn-secondary" onclick="goToStep(1)">Voltar</button>
-        <button class="btn-primary" onclick="goToStep3()">Continuar</button>
+        <button class="btn-secondary" onclick="goToStep(2)">← Voltar</button>
+        <button class="btn-primary" onclick="goToStep4()">Continuar</button>
       </div>
     </div>
   </div>
 
     <!-- STEP 3: Data, Horário e Entrega -->
-  <div id="step3" class="step-content" style="display:none;">
+  <div id="step4" class="step-content" style="display:none;">
     <div class="card">
       <h2 class="card-title">Data & Entrega 📅</h2>
       <p class="card-subtitle">Informe quando é o seu evento e como prefere receber o chope.</p>
@@ -1032,6 +1103,7 @@
       <div id="pickup-hora-input" style="display:none;margin-top:12px;">
         <div class="form-group">
           <label class="form-label">Horario exato para recolha</label>
+          <div id="pickup-date-info" class="info-box" style="display:none;margin-bottom:12px;font-weight:600;color:var(--gold);"></div>
           <select class="form-select" id="pickupTime">
             <option value="">Selecione o horario</option>
             <option value="08:00">08h00</option><option value="09:00">09h00</option>
@@ -1044,14 +1116,14 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn-secondary" onclick="goToStep(order.skipBarris ? 1 : 2)">← Voltar</button>
-        <button class="btn-primary" onclick="goToStep4()">Continuar →</button>
+        <button class="btn-secondary" onclick="goToStep(order.skipBarris ? 2 : 3)">← Voltar</button>
+        <button class="btn-primary" onclick="goToStep5()">Continuar →</button>
       </div>
     </div>
   </div>
 
   <!-- STEP 4: Dados do Cliente -->
-  <div id="step4" class="step-content" style="display:none;">
+  <div id="step5" class="step-content" style="display:none;">
     <div class="card">
       <h2 class="card-title">Seus Dados 📋</h2>
       <p class="card-subtitle">Precisamos de algumas informações para confirmar o pedido.</p>
@@ -1090,57 +1162,7 @@
         <div class="form-error" id="err-nasc">Data de nascimento é obrigatória.</div>
       </div>
 
-      <hr style="border:none;border-top:1px solid var(--border);margin:24px 0;">
-      <h3 style="font-family:'Playfair Display',serif;font-size:18px;margin-bottom:16px;">Endereço do Evento</h3>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">CEP <span class="required">*</span></label>
-          <input type="text" class="form-input" id="cep" placeholder="00000-000" oninput="maskCep(this)" onblur="buscarCep()" maxlength="9">
-          <div class="form-error" id="err-cep">CEP inválido.</div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Número <span class="required">*</span></label>
-          <input type="text" class="form-input" id="numero" placeholder="Nº">
-          <div class="form-error" id="err-num">Número é obrigatório.</div>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Logradouro <span class="required">*</span></label>
-        <input type="text" class="form-input" id="logradouro" placeholder="Rua, Avenida...">
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Bairro</label>
-          <input type="text" class="form-input" id="bairro" placeholder="Bairro">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Cidade / Estado</label>
-          <input type="text" class="form-input" id="cidadeEstado" placeholder="Cidade – UF">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Complemento</label>
-        <input type="text" class="form-input" id="complemento" placeholder="Apto, bloco, referência...">
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Local de Instalação da Chopeira <span class="required">*</span></label>
-        <select class="form-select" id="localInstalacao">
-          <option value="">Selecione o local</option>
-          <option value="Apartamento">Apartamento</option>
-          <option value="Casa">Casa</option>
-          <option value="Play">Play</option>
-          <option value="Churrasqueira">Churrasqueira</option>
-          <option value="Salão de Festas">Salão de Festas</option>
-          <option value="Outros">Outros</option>
-        </select>
-        <div class="form-error" id="err-local">Selecione o local de instalação.</div>
-      </div>
-
+      
       <!-- Evento em endereço de outra pessoa -->
       <div class="form-group" style="margin-top:24px;">
         <label class="checkbox-label">
@@ -1172,14 +1194,14 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn-secondary" onclick="goToStep(3)">← Voltar</button>
-        <button class="btn-primary" onclick="goToStep5()">Continuar →</button>
+        <button class="btn-secondary" onclick="goToStep(4)">← Voltar</button>
+        <button class="btn-primary" onclick="goToStep6()">Continuar →</button>
       </div>
     </div>
   </div>
 
   <!-- STEP 5: Pagamento -->
-  <div id="step5" class="step-content" style="display:none;">
+  <div id="step6" class="step-content" style="display:none;">
     <div class="card">
       <h2 class="card-title">Forma de Pagamento 💳</h2>
       <p class="card-subtitle">Como você prefere pagar pelo seu pedido?</p>
@@ -1201,14 +1223,14 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn-secondary" onclick="goToStep(4)">← Voltar</button>
+        <button class="btn-secondary" onclick="goToStep(5)">← Voltar</button>
         <button class="btn-primary" onclick="goToResumo()">Ver Resumo do Pedido →</button>
       </div>
     </div>
   </div>
 
   <!-- STEP 6: Resumo -->
-  <div id="step6" class="step-content" style="display:none;">
+  <div id="step7" class="step-content" style="display:none;">
     <div class="summary-header">
       <h2>🍺 Resumo do Pedido</h2>
       <p>Revise seu pedido antes de confirmar no WhatsApp</p>
@@ -1255,7 +1277,7 @@
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         Confirmar Pedido no WhatsApp
       </a>
-      <button class="btn-secondary" onclick="goToStep(5)" style="margin-top:12px;">← Editar Pedido</button>
+      <button class="btn-secondary" onclick="goToStep(6)" style="margin-top:12px;">← Editar Pedido</button>
     </div>
   </div>
 
@@ -1280,6 +1302,7 @@ const order = {
   service: null,
   beers: {},
   extraCups: 0,
+  freteExtra: 0,
   chopeira: null,      // 'gelo' | 'eletrica'
   tensao: null,        // '110v' | '220v'
   q30: 0,
@@ -1309,6 +1332,82 @@ const order = {
   observacoes: '',
   pagamento: 'pix',
 };
+
+
+
+// ============================================================
+//  ÁREA DE ATENDIMENTO — Google Sheets dinâmico
+//  Configure a URL da planilha publicada abaixo:
+// ============================================================
+const PLANILHA_BAIRROS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRXjWXqJgHY4GvSh5_t7Xki5izCZ0AzdGO8IwHXpXdBVj_nadBg1NdlfaRsayHoRXRuD8UnJ5w7mtxP/pub?gid=1078634299&single=true&output=csv';
+// Como obter a URL: veja a aba "Instruções" na planilha Bairros_Mistura_Classica.xlsx
+
+var bairrosData = null;  // null = não carregado ainda / lista não configurada
+
+function carregarBairros() {
+  if (!PLANILHA_BAIRROS_URL || PLANILHA_BAIRROS_URL === 'SUA_URL_AQUI') return;
+  fetch(PLANILHA_BAIRROS_URL)
+    .then(function(r) { return r.text(); })
+    .then(function(csv) {
+      bairrosData = parseBairrosCsv(csv);
+      console.log('Bairros carregados:', Object.keys(bairrosData).length);
+    })
+    .catch(function(e) {
+      console.warn('Não foi possível carregar a lista de bairros:', e);
+    });
+}
+
+function parseBairrosCsv(csv) {
+  // Remove BOM if present
+  csv = csv.replace(/^\uFEFF/, '');
+  var lines = csv.split(/\r?\n/);
+  var result = {};
+  // Skip header row (row 0 is title, row 1 is instruction, row 2 = headers, data from row 3)
+  // But when published as CSV from Google Sheets the header is row 0
+  var startRow = 0;
+  // Detect if first cell is the title (not "BAIRRO")
+  var firstCell = lines[0] ? lines[0].split(',')[0].replace(/"/g,'').trim().toLowerCase() : '';
+  if (firstCell !== 'bairro') startRow = 1; // skip title/instruction rows
+  // Find the header row
+  for (var h = startRow; h < Math.min(5, lines.length); h++) {
+    var cols = parseCsvLine(lines[h]);
+    if (cols[0] && cols[0].toLowerCase().includes('bairro')) { startRow = h + 1; break; }
+  }
+  for (var i = startRow; i < lines.length; i++) {
+    var cols = parseCsvLine(lines[i]);
+    if (!cols[0] || !cols[0].trim()) continue;
+    var bairro = cols[0].trim().toLowerCase();
+    var atende = cols[2] ? cols[2].trim().toLowerCase().startsWith('s') : false;
+    var frete  = cols[3] ? (parseFloat(cols[3].replace(',','.')) || 0) : 0;
+    result[bairro] = { atende: atende, frete: frete };
+    // Also store without accents as fallback key
+    var bairroSemAcento = bairro.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if (bairroSemAcento !== bairro) result[bairroSemAcento] = { atende: atende, frete: frete };
+  }
+  return result;
+}
+
+function parseCsvLine(line) {
+  var cols = [], cur = '', inQ = false;
+  for (var c = 0; c < line.length; c++) {
+    var ch = line[c];
+    if (ch === '"') { inQ = !inQ; }
+    else if (ch === ',' && !inQ) { cols.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  cols.push(cur);
+  return cols;
+}
+
+function validarBairro(bairro) {
+  if (!bairrosData) return { ok: true, frete: 0, aviso: null };
+  var key = bairro.toLowerCase().trim();
+  var keySA = key.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  var entry = bairrosData[key] || bairrosData[keySA];
+  if (!entry) return { ok: true, frete: 0, aviso: 'nao_cadastrado' };
+  if (!entry.atende) return { ok: false, frete: 0, aviso: null };
+  return { ok: true, frete: entry.frete || 0, aviso: null };
+}
 
 // ============================================================
 //  AGE GATE
@@ -1426,6 +1525,19 @@ function calcBeerTotal() {
   return calcBeerSubtotal() - calcKitDiscount();
 }
 
+function calcTotal() {
+  var total = 0;
+  if (order.service === 'aluguel') total += 250;
+  else total += calcBeerTotal();
+  if (order.delivery === 'exclusivo') total += 200;
+  if (order.pickupType === 'exclusivo') total += 200;
+  if (order.diarias === 1) total += 150;
+  if (order.diarias === 2) total += 200;
+  total += (order.extraCups || 0) * 20;
+  total += (order.freteExtra || 0);
+  return total;
+}
+
 function updateBeerSubtotal() {
   var nb = calcFreeCups();
   var fc = document.getElementById('cups-free-count');
@@ -1457,11 +1569,28 @@ function updateBeerSubtotal() {
   document.getElementById('sub-total').textContent = fmt(calcBeerTotal() + (order.extraCups||0)*20);
 }
 
+
+function updatePickupDate() {
+  var dateVal = document.getElementById('eventDate').value;
+  if (!dateVal) return;
+  var d = new Date(dateVal + 'T12:00:00');
+  d.setDate(d.getDate() + (order.diarias || 0));
+  var day   = String(d.getDate()).padStart(2, '0');
+  var month = String(d.getMonth() + 1).padStart(2, '0');
+  var year  = d.getFullYear();
+  var el = document.getElementById('pickup-date-info');
+  if (el) {
+    el.textContent = 'Data de recolha: ' + day + '/' + month + '/' + year;
+    el.style.display = 'block';
+  }
+}
+
 function selectPickup(type) {
   order.pickupType = type;
   ['pick-rota','pick-exclusivo'].forEach(function(id){ document.getElementById(id).classList.remove('selected'); });
   document.getElementById('pick-' + type).classList.add('selected');
   document.getElementById('pickup-hora-input').style.display = type === 'exclusivo' ? 'block' : 'none';
+  if (type === 'exclusivo') updatePickupDate();
 }
 
 // ============================================================
@@ -1508,60 +1637,57 @@ function goToStep2() {
   if (!order.service) { alert('Por favor, selecione o tipo de serviço.'); return; }
   if (order.service !== 'barris' && !order.chopeira) { alert('Por favor, selecione o tipo de chopeira.'); return; }
   if (order.chopeira === 'eletrica' && !order.tensao) { alert('Por favor, selecione a tensão da chopeira elétrica.'); return; }
-
-  if (order.skipBarris) {
-    goToStep(3);
-  } else {
-    refreshBeerPrices();
-    goToStep(2);
-  }
-}
-
-// ============================================================
-//  STEP 2 – Barris
-// ============================================================
-
-
-function changeQty(id, delta) {
-  const el = document.getElementById(id);
-  let v = parseInt(el.textContent) + delta;
-  if (v < 0) v = 0;
-  el.textContent = v;
-  if (id === 'q30') order.q30 = v;
-  else order.q50 = v;
-  updateSubtotal();
-}
-
-
-function fmt(v) { return 'R$ ' + v.toFixed(2).replace('.', ','); }
-
-
-function calcTotal() {
-  var total = 0;
-  if (order.service === 'aluguel') total += 250;
-  else total += calcBeerTotal();
-  if (order.delivery === 'exclusivo') total += 200;
-  if (order.pickupType === 'exclusivo') total += 200;
-  if (order.diarias === 1) total += 150;
-  if (order.diarias === 2) total += 200;
-  total += (order.extraCups || 0) * 20;
-  return total;
+  goToStep(2);
 }
 
 function goToStep3() {
-  if (!order.skipBarris) {
-    if (calcTotalBarrels() === 0) {
-      if (!confirm('Voce nao selecionou nenhum barril. Deseja continuar assim mesmo?')) return;
-    }
-    if (order.service === 'kit') {
-      var totalL = calcTotalLiters();
-      if (totalL > 0 && totalL < 30) {
-        alert('O pedido de Delivery de Chope com Chopeira Inclusa requer um m\u00ednimo de 30 litros.\n\nSeu pedido atual tem ' + totalL + ' litros. Adicione mais barris para continuar.');
-        return;
-      }
+  var valid = true;
+  var cep = document.getElementById('cep').value.replace(/\D/g,'');
+  if (cep.length < 8) { document.getElementById('err-cep').style.display='block'; valid=false; }
+  else document.getElementById('err-cep').style.display='none';
+  if (!document.getElementById('numero').value.trim()) { document.getElementById('err-num').style.display='block'; valid=false; }
+  else document.getElementById('err-num').style.display='none';
+  var bairro = document.getElementById('bairro').value.trim();
+  if (!bairro) { document.getElementById('err-bairro').style.display='block'; valid=false; }
+  else document.getElementById('err-bairro').style.display='none';
+  if (!document.getElementById('localInstalacao').value) { document.getElementById('err-local').style.display='block'; valid=false; }
+  else document.getElementById('err-local').style.display='none';
+  if (!valid) { window.scrollTo(0,0); return; }
+  // Save address data
+  order.cep           = document.getElementById('cep').value;
+  order.logradouro    = document.getElementById('logradouro').value;
+  order.numero        = document.getElementById('numero').value;
+  order.bairro        = bairro;
+  order.complemento   = document.getElementById('complemento').value;
+  order.cidadeEstado  = document.getElementById('cidadeEstado').value;
+  order.localInstalacao = document.getElementById('localInstalacao').value;
+  // Validate neighborhood
+  var validacao = validarBairro(bairro);
+  if (!validacao.ok) {
+    var errEl = document.getElementById('err-bairro');
+    errEl.textContent = 'Desculpe, não atendemos no bairro "' + bairro + '". Fora da nossa área de cobertura.';
+    errEl.style.display = 'block';
+    return;
+  }
+  // Apply freight if applicable
+  order.freteExtra = validacao.frete || 0;
+  // Show freight info if applicable
+  var freightNotice = document.getElementById('freight-notice');
+  if (freightNotice) {
+    if (order.freteExtra > 0) {
+      freightNotice.textContent = 'ℹ️ Frete de R$ ' + order.freteExtra.toFixed(2).replace('.',',') + ' aplicado para este bairro.';
+      freightNotice.style.display = 'block';
+    } else {
+      freightNotice.style.display = 'none';
     }
   }
-  goToStep(3);
+
+  if (order.skipBarris) {
+    goToStep(4);
+  } else {
+    refreshBeerPrices();
+    goToStep(3);
+  }
 }
 
 // ============================================================
@@ -1580,6 +1706,7 @@ document.getElementById('eventDate').addEventListener('change', function() {
   order.eventDate = this.value;
   const t = document.getElementById('eventTime').value;
   if (t) updateDeliveryInfo(t);
+  if (order.pickupType === 'exclusivo') updatePickupDate();
 });
 document.getElementById('eventTime').addEventListener('change', function() {
   order.eventTime = this.value;
@@ -1607,24 +1734,23 @@ function selectDelivery(type) {
 
 function selectDiarias(n) {
   order.diarias = n;
+  if (order.pickupType === 'exclusivo') updatePickupDate();
   ['diar-0','diar-1','diar-2'].forEach(id => document.getElementById(id).classList.remove('selected'));
   document.getElementById('diar-' + n).classList.add('selected');
 }
 
 function goToStep4() {
-  const date = document.getElementById('eventDate').value;
-  const time = document.getElementById('eventTime').value;
-  if (!date) { document.getElementById('err-date').style.display = 'block'; return; }
-  document.getElementById('err-date').style.display = 'none';
-  if (!time) { document.getElementById('err-time').style.display = 'block'; return; }
-  document.getElementById('err-time').style.display = 'none';
-  order.eventDate = date;
-  order.eventTime = time;
-  if (order.delivery === 'exclusivo') {
-    order.deliveryTime = document.getElementById('deliveryTime').value;
-  }
-  if (order.pickupType === 'exclusivo') {
-    order.pickupTime = document.getElementById('pickupTime').value;
+  if (!order.skipBarris) {
+    if (calcTotalBarrels() === 0) {
+      if (!confirm('Você não selecionou nenhum barril. Deseja continuar assim mesmo?')) return;
+    }
+    if (order.service === 'kit') {
+      var totalL = calcTotalLiters();
+      if (totalL > 0 && totalL < 30) {
+        alert('O pedido de Delivery de Chope com Chopeira Inclusa requer um mínimo de 30 litros.\n\nSeu pedido atual tem ' + totalL + ' litros. Adicione mais barris para continuar.');
+        return;
+      }
+    }
   }
   goToStep(4);
 }
@@ -1728,7 +1854,32 @@ function toggleOutraPessoa(el) {
   document.getElementById('outra-pessoa-fields').style.display = el.checked ? 'block' : 'none';
 }
 
+
 function goToStep5() {
+  var date = document.getElementById('eventDate').value;
+  var time = document.getElementById('eventTime').value;
+  if (!date) {
+    document.getElementById('err-date').style.display = 'block';
+    return;
+  }
+  document.getElementById('err-date').style.display = 'none';
+  if (!time) {
+    document.getElementById('err-time').style.display = 'block';
+    return;
+  }
+  document.getElementById('err-time').style.display = 'none';
+  order.eventDate = date;
+  order.eventTime = time;
+  if (order.delivery === 'exclusivo') {
+    order.deliveryTime = document.getElementById('deliveryTime').value;
+  }
+  if (order.pickupType === 'exclusivo') {
+    order.pickupTime = document.getElementById('pickupTime').value;
+  }
+  goToStep(5);
+}
+
+function goToStep6() {
   let valid = true;
   const nome = document.getElementById('nome').value.trim();
   if (!nome) { document.getElementById('err-nome').style.display = 'block'; valid = false; }
@@ -1761,17 +1912,11 @@ function goToStep5() {
   order.nome = nome;
   order.documento = document.getElementById('documento').value;
   order.dataNascimento = document.getElementById('dataNascimento').value;
-  order.cep = document.getElementById('cep').value;
-  order.logradouro = document.getElementById('logradouro').value;
-  order.numero = document.getElementById('numero').value;
-  order.bairro = document.getElementById('bairro').value;
-  order.complemento = document.getElementById('complemento').value;
-  order.cidadeEstado = document.getElementById('cidadeEstado').value;
-  order.localInstalacao = document.getElementById('localInstalacao').value;
+  // address already saved in goToStep3
   order.nomeOutra = document.getElementById('nomeOutra').value;
   order.telOutra = document.getElementById('telOutra').value;
   order.observacoes = document.getElementById('observacoes').value;
-  goToStep(5);
+  goToStep(6);
 }
 
 // ============================================================
@@ -1788,7 +1933,7 @@ function selectPagamento(tipo) {
 // ============================================================
 function goToResumo() {
   buildResumo();
-  goToStep(6);
+  goToStep(7);
 }
 
 function serviceLabel() {
@@ -1833,6 +1978,12 @@ function buildResumo() {
     if (kdisc > 0) bHtml += resumoItem('Desconto R$1/litro', '\u2212' + fmt(kdisc));
     bHtml += resumoItem('Subtotal do Pedido', fmt(calcBeerTotal()+(order.extraCups||0)*20));
     document.getElementById('resumo-barris').innerHTML = bHtml;
+  }
+
+  // Freight
+  if (order.freteExtra > 0) {
+    document.getElementById('resumo-barris-section').innerHTML += '<div class="summary-section" style="margin-top:0;"><div class="summary-section-title">Logística</div><div id="resumo-frete"></div></div>';
+    document.getElementById('resumo-frete').innerHTML = resumoItem('Frete de entrega', fmt(order.freteExtra));
   }
 
   // Evento
@@ -1925,6 +2076,7 @@ function sendWhatsapp() {
   if (order.observacoes) msg += '  • Obs: ' + order.observacoes + '\n';
   msg += '\n';
 
+  if (order.freteExtra > 0) msg += '🚚 *FRETE:* ' + fmt(order.freteExtra) + ' (bairro: ' + order.bairro + ')\n\n';
   msg += '💳 *PAGAMENTO:* ' + (order.pagamento === 'pix' ? 'PIX' : 'Cartão (link de pagamento)') + '\n\n';
   msg += '💰 *TOTAL ESTIMADO: ' + fmt(total) + '*\n';
   msg += '────────────────────────\n';
@@ -1971,6 +2123,7 @@ function updateProgress(current) {
   selectDiarias(0);
   selectPagamento('pix');
   selectTipoCadastro('cpf');
+  carregarBairros();
 })();
 </script>
 </body>
