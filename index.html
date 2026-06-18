@@ -1336,154 +1336,123 @@ const order = {
 
 
 // ============================================================
-//  ÁREA DE ATENDIMENTO — Google Sheets dinâmico
-//  Configure a URL da planilha publicada abaixo:
+//  ÁREA DE ATENDIMENTO — Google Sheets via JSONP (gviz)
+//  Cole abaixo o LINK NORMAL da planilha (o de compartilhamento),
+//  algo como:
+//  https://docs.google.com/spreadsheets/d/CHAVE_AQUI/edit?gid=123#gid=123
 // ============================================================
-const PLANILHA_BAIRROS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRXjWXqJgHY4GvSh5_t7Xki5izCZ0AzdGO8IwHXpXdBVj_nadBg1NdlfaRsayHoRXRuD8UnJ5w7mtxP/pub?gid=1078634299&single=true&output=csv';
-// Como obter a URL: veja a aba "Instruções" na planilha Bairros_Mistura_Classica.xlsx
+const PLANILHA_BAIRROS_URL = 'https://docs.google.com/spreadsheets/d/1hTIOLIcTnJ3bp62xNKNRZ5ZlKMj3jzQAHKgJETPiCmU/edit?usp=sharing';
 
-var bairrosData = null;  // null = não carregado ainda / lista não configurada
+var bairrosData = null;  // null = carregando | objeto = ok | 'ERRO' = falhou
 
-var _bairrosRetry = 0;
+// Extrai a CHAVE e o GID de qualquer formato de link do Google Sheets
+function extrairChaveGid(url) {
+  var chave = null, gid = '0';
+  // Rejeita o formato publicado /d/e/2PACX-... (não funciona com gviz)
+  if (url.indexOf('/spreadsheets/d/e/') >= 0) {
+    console.warn('[Bairros] ATENÇÃO: o link é do tipo "publicado na web" (/d/e/2PACX-...). ' +
+                 'O gviz precisa do LINK DE COMPARTILHAMENTO normal (/spreadsheets/d/CHAVE/edit). ' +
+                 'Use Compartilhar > Copiar link, com acesso "qualquer pessoa com o link".');
+    return null;
+  }
+  var mKey = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  if (mKey) chave = mKey[1];
+  var mGid = url.match(/[?&#]gid=([0-9]+)/);
+  if (mGid) gid = mGid[1];
+  return chave ? { chave: chave, gid: gid } : null;
+}
+
 function carregarBairros() {
   if (!PLANILHA_BAIRROS_URL || PLANILHA_BAIRROS_URL.indexOf('http') !== 0) {
     console.log('[Bairros] URL não configurada — validação desativada.');
     return;
   }
-  console.log('[Bairros] Carregando planilha... tentativa ' + (_bairrosRetry + 1));
+  var info = extrairChaveGid(PLANILHA_BAIRROS_URL);
+  if (!info) {
+    console.warn('[Bairros] Não foi possível extrair a chave da planilha do link. Verifique a URL.');
+    bairrosData = 'ERRO';
+    return;
+  }
+  console.log('[Bairros] Carregando planilha (chave: ' + info.chave.substring(0,8) + '..., gid: ' + info.gid + ')');
 
-  function sucesso(csv) {
+  // Callback global para o JSONP do Google Visualization API
+  window.gvizCallback = function(resp) {
     try {
-      var parsed = parseBairrosCsv(csv);
-      var n = Object.keys(parsed).length;
+      if (!resp || !resp.table || !resp.table.rows) throw new Error('Resposta sem dados');
+      bairrosData = parseGvizTable(resp.table);
+      var n = Object.keys(bairrosData).length;
       if (n > 5) {
-        bairrosData = parsed;
-        _bairrosRetry = 0;
         console.log('[Bairros] ✓ Carregados: ' + n + ' bairros.');
       } else {
-        throw new Error('Apenas ' + n + ' itens lidos — formato inesperado.');
+        throw new Error('Apenas ' + n + ' itens — verifique se a aba e o gid estão corretos.');
       }
     } catch (err) {
-      console.warn('[Bairros] Erro ao processar:', err);
-      falha();
-    }
-  }
-
-  function falha() {
-    _bairrosRetry++;
-    if (_bairrosRetry <= 4) {
-      setTimeout(carregarBairros, 2500 * _bairrosRetry);
-    } else {
+      console.warn('[Bairros] Erro ao processar resposta:', err);
       bairrosData = 'ERRO';
-      console.warn('[Bairros] ✗ Falha definitiva após várias tentativas. Validação desativada (pedidos passam direto).');
     }
-  }
+  };
 
-  // Estratégia 1: fetch direto (Google publica CSV com CORS liberado)
-  fetch(PLANILHA_BAIRROS_URL)
-    .then(function(r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.text();
-    })
-    .then(sucesso)
-    .catch(function(e) {
-      console.warn('[Bairros] fetch direto falhou:', e.message, '— tentando via proxy...');
-      // Estratégia 2: proxy CORS público (fallback)
-      var proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(PLANILHA_BAIRROS_URL);
-      fetch(proxyUrl)
-        .then(function(r) {
-          if (!r.ok) throw new Error('Proxy HTTP ' + r.status);
-          return r.text();
-        })
-        .then(sucesso)
-        .catch(function(e2) {
-          console.warn('[Bairros] proxy também falhou:', e2.message);
-          falha();
-        });
-    });
+  var url = 'https://docs.google.com/spreadsheets/d/' + info.chave +
+            '/gviz/tq?sheet=Bairros' +
+            '&tqx=responseHandler:gvizCallback&headers=1';
+
+  var script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() {
+    console.warn('[Bairros] ✗ Falha ao carregar (verifique se a planilha está compartilhada como "qualquer pessoa com o link pode ver").');
+    bairrosData = 'ERRO';
+  };
+  document.head.appendChild(script);
 }
 
-function parseBairrosCsv(csv) {
-  // Strip BOM
-  csv = csv.replace(/^\uFEFF/, '');
-  // Parse CSV respecting quoted multiline cells
-  var rows = parseCsvRows(csv);
+// Converte a tabela do gviz em { bairro: {atende, frete} }
+function parseGvizTable(table) {
   var result = {};
-  // Find header row (the one whose first cell = 'bairro')
-  var dataStart = -1;
-  for (var h = 0; h < Math.min(8, rows.length); h++) {
-    if (rows[h][0] && rows[h][0].trim().toLowerCase() === 'bairro') {
-      dataStart = h + 1;
-      break;
+  var rows = table.rows;
+  // Detecta as colunas pelos rótulos (cabeçalho) ou usa posições padrão 0,1,2,3
+  var colBairro = 0, colAtende = 2, colFrete = 3;
+  if (table.cols && table.cols.length) {
+    for (var c = 0; c < table.cols.length; c++) {
+      var label = (table.cols[c].label || '').toLowerCase();
+      if (label.indexOf('bairro') >= 0) colBairro = c;
+      else if (label.indexOf('atende') >= 0) colAtende = c;
+      else if (label.indexOf('frete') >= 0) colFrete = c;
     }
   }
-  if (dataStart < 0) {
-    // Fallback: skip rows until we find one that looks like data
-    dataStart = 1;
-  }
-  for (var i = dataStart; i < rows.length; i++) {
-    var cols = rows[i];
-    if (!cols[0] || !cols[0].trim()) continue;
-    var bairro = cols[0].trim().toLowerCase();
-    var atende = cols[2] ? cols[2].trim().toLowerCase().charAt(0) === 's' : false;
-    var frete  = cols[3] ? (parseFloat(cols[3].replace(/[^\d.,]/g,'').replace(',','.')) || 0) : 0;
+  for (var i = 0; i < rows.length; i++) {
+    var cells = rows[i].c;
+    if (!cells || !cells[colBairro] || cells[colBairro].v == null) continue;
+    var bairro = String(cells[colBairro].v).trim().toLowerCase();
+    if (!bairro || bairro === 'bairro') continue;
+    var atendeRaw = cells[colAtende] && cells[colAtende].v != null ? String(cells[colAtende].v).trim().toLowerCase() : '';
+    var atende = atendeRaw.charAt(0) === 's';
+    var freteRaw = cells[colFrete] && cells[colFrete].v != null ? cells[colFrete].v : 0;
+    var frete = typeof freteRaw === 'number' ? freteRaw : (parseFloat(String(freteRaw).replace(/[^\d.,]/g,'').replace(',','.')) || 0);
     result[bairro] = { atende: atende, frete: frete };
-    // Also store accent-stripped version as fallback
-    var noAccent = bairro.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    var noAccent = bairro.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     if (noAccent !== bairro) result[noAccent] = { atende: atende, frete: frete };
   }
   return result;
 }
 
-// Proper CSV row splitter — handles quoted fields with embedded newlines and commas
-function parseCsvRows(csv) {
-  var rows = [], row = [], cur = '', inQ = false;
-  for (var i = 0; i < csv.length; i++) {
-    var c = csv[i];
-    if (c === '"') {
-      if (inQ && csv[i + 1] === '"') { cur += '"'; i++; } // escaped quote ""
-      else inQ = !inQ;
-    } else if (c === '\r') {
-      if (csv[i + 1] === '\n') i++;  // skip \r of \r\n
-      if (!inQ) { row.push(cur); cur = ''; rows.push(row); row = []; }
-      else cur += '\n';
-    } else if (c === '\n') {
-      if (!inQ) { row.push(cur); cur = ''; rows.push(row); row = []; }
-      else cur += '\n';
-    } else if (c === ',' && !inQ) {
-      row.push(cur); cur = '';
-    } else {
-      cur += c;
-    }
-  }
-  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
-  return rows;
-}
-
-
 function validarBairro(bairro) {
-  // URL not configured — validation disabled, allow all
-  if (!PLANILHA_BAIRROS_URL || PLANILHA_BAIRROS_URL === 'SUA_URL_AQUI') {
+  // URL não configurada — validação desativada
+  if (!PLANILHA_BAIRROS_URL || PLANILHA_BAIRROS_URL.indexOf('http') !== 0) {
     return { ok: true, frete: 0, aviso: null };
   }
-  // Loading permanently failed — allow through with a note
+  // Falha definitiva — deixa passar com aviso interno
   if (bairrosData === 'ERRO') {
     return { ok: true, frete: 0, aviso: 'erro_carga' };
   }
-  // URL configured but data not yet loaded
+  // Ainda carregando
   if (!bairrosData) {
     return { ok: false, frete: 0, aviso: 'carregando' };
   }
   var key   = bairro.toLowerCase().trim();
   var keySA = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   var entry = bairrosData[key] || bairrosData[keySA];
-  // Bairro not in list = outside service area
-  if (!entry) {
-    return { ok: false, frete: 0, aviso: 'nao_cadastrado' };
-  }
-  if (!entry.atende) {
-    return { ok: false, frete: 0, aviso: 'nao_atende' };
-  }
+  if (!entry) return { ok: false, frete: 0, aviso: 'nao_cadastrado' };
+  if (!entry.atende) return { ok: false, frete: 0, aviso: 'nao_atende' };
   return { ok: true, frete: entry.frete || 0, aviso: null };
 }
 
