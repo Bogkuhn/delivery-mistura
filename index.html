@@ -963,6 +963,7 @@
         <div id="subtotal-beer-lines"></div>
         <div class="subtotal-row" id="sub-discount-kit-row" style="display:none;"><span style="color:#7ED882;">&#127881; Desconto R$1/litro</span><span style="color:#7ED882;" id="sub-discount-kit-val"></span></div>
         <div class="subtotal-row" id="sub-cups-row" style="display:none;"><span>Copos extras</span><span id="sub-cups-val">-</span></div>
+        <div class="subtotal-row" id="sub-frete-row" style="display:none;"><span>🚚 Frete de entrega</span><span id="sub-frete-val">-</span></div>
         <div class="subtotal-row total"><span>Subtotal do Pedido</span><span id="sub-total">R$ 0,00</span></div>
       </div>
       <div class="btn-row">
@@ -1259,6 +1260,11 @@
     <div class="summary-section">
       <div class="summary-section-title">Pagamento</div>
       <div id="resumo-pagamento"></div>
+    </div>
+
+    <div class="summary-section" id="resumo-frete-section" style="display:none;">
+      <div class="summary-section-title">Logística</div>
+      <div id="resumo-frete"></div>
     </div>
 
     <div class="total-final">
@@ -1615,7 +1621,13 @@ function updateBeerSubtotal() {
   var cr = document.getElementById('sub-cups-row');
   if (order.extraCups > 0) { cr.style.display='flex'; document.getElementById('sub-cups-val').textContent = fmt(order.extraCups*20); }
   else cr.style.display='none';
-  document.getElementById('sub-total').textContent = fmt(calcBeerTotal() + (order.extraCups||0)*20);
+  // Frete row
+  var fr = document.getElementById('sub-frete-row');
+  if (fr) {
+    if (order.freteExtra > 0) { fr.style.display='flex'; document.getElementById('sub-frete-val').textContent = fmt(order.freteExtra); }
+    else fr.style.display='none';
+  }
+  document.getElementById('sub-total').textContent = fmt(calcBeerTotal() + (order.extraCups||0)*20 + (order.freteExtra||0));
 }
 
 
@@ -2062,9 +2074,12 @@ function buildResumo() {
   }
 
   // Freight
+  var freteSection = document.getElementById('resumo-frete-section');
   if (order.freteExtra > 0) {
-    document.getElementById('resumo-barris-section').innerHTML += '<div class="summary-section" style="margin-top:0;"><div class="summary-section-title">Logística</div><div id="resumo-frete"></div></div>';
+    if (freteSection) freteSection.style.display = 'block';
     document.getElementById('resumo-frete').innerHTML = resumoItem('Frete de entrega', fmt(order.freteExtra));
+  } else {
+    if (freteSection) freteSection.style.display = 'none';
   }
 
   // Evento
