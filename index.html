@@ -1346,8 +1346,7 @@ var bairrosData = null;  // null = não carregado ainda / lista não configurada
 
 var _bairrosRetry = 0;
 function carregarBairros() {
-  if (!PLANILHA_BAIRROS_URL || PLANILHA_BAIRROS_URL === 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRXjWXqJgHY4GvSh5_t7Xki5izCZ0AzdGO8IwHXpXdBVj_nadBg1NdlfaRsayHoRXRuD8UnJ5w7mtxP/pub?gid=1078634299&single=true&output=csv') {
-    console.log('[Bairros] URL não configurada — validação desativada.');
+  if (!PLANILHA_BAIRROS_URL || PLANILHA_BAIRROS_URL === 'SUA_URL_AQUI');
     return;
   }
   console.log('[Bairros] Carregando planilha... tentativa ' + (_bairrosRetry + 1));
