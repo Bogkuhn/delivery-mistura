@@ -1344,16 +1344,36 @@ const PLANILHA_BAIRROS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR
 
 var bairrosData = null;  // null = não carregado ainda / lista não configurada
 
+var _bairrosRetry = 0;
 function carregarBairros() {
   if (!PLANILHA_BAIRROS_URL || PLANILHA_BAIRROS_URL === 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRXjWXqJgHY4GvSh5_t7Xki5izCZ0AzdGO8IwHXpXdBVj_nadBg1NdlfaRsayHoRXRuD8UnJ5w7mtxP/pub?gid=1078634299&single=true&output=csv') return;
-  fetch(PLANILHA_BAIRROS_URL)
-    .then(function(r) { return r.text(); })
+  fetch(PLANILHA_BAIRROS_URL, { cache: 'no-cache' })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.text();
+    })
     .then(function(csv) {
-      bairrosData = parseBairrosCsv(csv);
-      console.log('Bairros carregados:', Object.keys(bairrosData).length);
+      try {
+        var parsed = parseBairrosCsv(csv);
+        if (Object.keys(parsed).length > 5) {
+          bairrosData = parsed;
+          _bairrosRetry = 0;
+          console.log('Bairros carregados:', Object.keys(bairrosData).length);
+        } else {
+          throw new Error('Planilha vazia ou formato inesperado');
+        }
+      } catch(parseErr) {
+        console.warn('Erro ao processar planilha:', parseErr);
+        _bairrosRetry++;
+        if (_bairrosRetry <= 3) setTimeout(carregarBairros, 3000 * _bairrosRetry);
+        else bairrosData = 'ERRO';
+      }
     })
     .catch(function(e) {
-      console.warn('Não foi possível carregar a lista de bairros:', e);
+      console.warn('Erro ao carregar bairros (tentativa ' + (_bairrosRetry + 1) + '):', e);
+      _bairrosRetry++;
+      if (_bairrosRetry <= 3) setTimeout(carregarBairros, 3000 * _bairrosRetry);
+      else bairrosData = 'ERRO';
     });
 }
 
@@ -1404,7 +1424,11 @@ function validarBairro(bairro) {
   if (!PLANILHA_BAIRROS_URL || PLANILHA_BAIRROS_URL === 'SUA_URL_AQUI') {
     return { ok: true, frete: 0, aviso: null };
   }
-  // URL configured but data not yet loaded (fetch still in progress or failed)
+  // Loading permanently failed — allow through with a note
+  if (bairrosData === 'ERRO') {
+    return { ok: true, frete: 0, aviso: 'erro_carga' };
+  }
+  // URL configured but data not yet loaded
   if (!bairrosData) {
     return { ok: false, frete: 0, aviso: 'carregando' };
   }
@@ -1651,6 +1675,8 @@ function goToStep2() {
   if (!order.service) { alert('Por favor, selecione o tipo de serviço.'); return; }
   if (order.service !== 'barris' && !order.chopeira) { alert('Por favor, selecione o tipo de chopeira.'); return; }
   if (order.chopeira === 'eletrica' && !order.tensao) { alert('Por favor, selecione a tensão da chopeira elétrica.'); return; }
+  // Retry loading neighborhood data while user fills the address form
+  if (!bairrosData || bairrosData === 'ERRO') { _bairrosRetry = 0; carregarBairros(); }
   goToStep(2);
 }
 
@@ -1698,15 +1724,20 @@ function goToStep3() {
   if (!validacao.ok) {
     var msg;
     if (validacao.aviso === 'carregando') {
-      msg = 'A lista de bairros ainda está sendo carregada. Aguarde alguns segundos e tente novamente.';
+      msg = 'Verificando área de atendimento... Tente novamente em alguns segundos. (Se o problema persistir, entre em contato pelo WhatsApp.)';
+      carregarBairros(); // trigger a fresh retry
     } else if (validacao.aviso === 'nao_cadastrado') {
-      msg = 'O bairro "' + bairro + '" não está na nossa área de atendimento. Confirme o nome do bairro ou entre em contato pelo WhatsApp.';
+      msg = 'O bairro "' + bairro + '" não está cadastrado na nossa área de atendimento. Confirme o nome ou entre em contato pelo WhatsApp.';
     } else {
-      msg = 'Desculpe, não realizamos entregas no bairro "' + bairro + '". Entre em contato pelo WhatsApp para mais informações.';
+      msg = 'Não realizamos entregas no bairro "' + bairro + '". Entre em contato pelo WhatsApp para mais informações.';
     }
     showErr('err-bairro', msg);
     document.getElementById('err-bairro').scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
+  }
+  // If data failed to load, add a note but allow through
+  if (validacao.aviso === 'erro_carga') {
+    console.warn('Bairros data failed to load — skipping validation');
   }
   order.freteExtra = validacao.frete || 0;
 
