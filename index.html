@@ -649,8 +649,17 @@
       .form-row { grid-template-columns: 1fr; }
       .card { padding: 22px 18px; }
       .header-tagline { display: none; }
+      .progress-container { padding: 14px 8px 12px; }
       .progress-steps { gap: 0; }
-      .dot-label { display: none; }
+      .dot-label {
+        display: block;
+        font-size: 8px;
+        letter-spacing: 0;
+        white-space: normal;
+        word-break: break-word;
+      }
+      .dot-circle { width: 24px; height: 24px; font-size: 11px; }
+      .step-dot::before { top: 12px; left: calc(-50% + 12px); width: calc(100% - 24px); }
       .btn-row { flex-direction: column; align-items: stretch; }
       .btn-row .btn-primary, .btn-row .btn-secondary { text-align: center; justify-content: center; }
     }
