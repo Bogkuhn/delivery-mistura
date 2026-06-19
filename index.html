@@ -2193,6 +2193,67 @@ function resumoItem(label, value) {
 // ============================================================
 //  WHATSAPP MESSAGE
 // ============================================================
+function dispararConversao() {
+  try {
+    var total   = calcTotal();
+    var litros  = (typeof calcTotalLiters === 'function') ? calcTotalLiters() : 0;
+
+    // Monta a lista de itens (barris) e conta o total de unidades
+    var contents = [];
+    var items = [];
+    var numBarris = 0;
+    if (order.beers) {
+      for (var key in order.beers) {
+        var qty = order.beers[key] || 0;
+        if (!qty) continue;
+        numBarris += qty;
+        contents.push({ id: key, quantity: qty });
+        items.push({ item_id: key, quantity: qty });
+      }
+    }
+
+    var params = {
+      valor: total,                 // valor total estimado do pedido (R$)
+      moeda: 'BRL',
+      servico: order.service || '', // 'kit' | 'barris' | 'aluguel'
+      pagamento: order.pagamento || '', // 'pix' | 'cartao'
+      num_barris: numBarris,
+      litros: litros,
+      bairro: order.bairro || '',
+      data_evento: order.eventDate || ''
+    };
+
+    // ---- Google Tag Manager (dataLayer) ----
+    // A agência configura no GTM a conversão de Google Ads / GA4 a partir deste evento.
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      event: 'finalizar_pedido',
+      ecommerce: {
+        currency: 'BRL',
+        value: total,
+        items: items
+      },
+      pedido: params
+    });
+
+    // ---- Meta Pixel ----
+    // Evento padrão "Lead" (o pedido é enviado p/ confirmação no WhatsApp, ainda não pago).
+    // Se a agência rodar campanhas de vendas/ROAS, troque 'Lead' por 'Purchase' na linha abaixo.
+    if (typeof fbq === 'function') {
+      fbq('track', 'Lead', {
+        value: total,
+        currency: 'BRL',
+        content_type: 'product',
+        contents: contents,
+        num_items: numBarris
+      });
+    }
+  } catch (e) {
+    // Nunca interromper o envio ao WhatsApp por causa de rastreamento
+    if (window.console && console.warn) console.warn('Falha ao disparar conversão:', e);
+  }
+}
+
 function sendWhatsapp() {
   const dateFormatted = order.eventDate ? order.eventDate.split('-').reverse().join('/') : '';
   const total = calcTotal();
@@ -2250,6 +2311,7 @@ function sendWhatsapp() {
   msg += 'Aguardo a confirmação! 😊';
 
   const url = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(msg);
+  dispararConversao();
   window.open(url, '_blank');
 }
 
