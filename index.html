@@ -1,33 +1,14 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <!-- Google Tag Manager -->
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-  })(window,document,'script','dataLayer','GTM-KF2FLHXP');</script>
-  <!-- End Google Tag Manager -->
+  <!--
+    Google Tag Manager e Meta Pixel NÃO são carregados automaticamente.
+    Eles só são ativados após o visitante ACEITAR os cookies no banner de
+    consentimento (ver bloco "CONSENTIMENTO DE COOKIES (LGPD)" no fim do body).
+    IDs: GTM-KF2FLHXP  |  Meta Pixel 2121609558422353
+  -->
 
-  <!-- Meta Pixel Code -->
-  <script>
-  !function(f,b,e,v,n,t,s)
-  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-  n.queue=[];t=b.createElement(e);t.async=!0;
-  t.src=v;s=b.getElementsByTagName(e)[0];
-  s.parentNode.insertBefore(t,s)}(window, document,'script',
-  'https://connect.facebook.net/en_US/fbevents.js');
-  fbq('init', '2121609558422353');
-  fbq('track', 'PageView');
-  </script>
-  <noscript><img height="1" width="1" style="display:none"
-  src="https://www.facebook.com/tr?id=2121609558422353&ev=PageView&noscript=1"
-  /></noscript>
-  <!-- End Meta Pixel Code -->
-
-  <!-- Verificação de domínio Meta (alternativa ao registro DNS) -->
+  <!-- Verificação de domínio Meta (apenas verificação, não rastreia) -->
   <meta name="facebook-domain-verification" content="d4zhklmyqfyd3nq9b192u4aozqlab9" />
 
   <meta charset="UTF-8">
@@ -663,13 +644,67 @@
       .btn-row { flex-direction: column; align-items: stretch; }
       .btn-row .btn-primary, .btn-row .btn-secondary { text-align: center; justify-content: center; }
     }
+    /* ========== BANNER DE COOKIES (LGPD) ========== */
+    .cookie-banner {
+      position: fixed;
+      left: 16px; right: 16px; bottom: 16px;
+      max-width: 720px;
+      margin: 0 auto;
+      background: var(--dark);
+      color: rgba(255,255,255,0.85);
+      border: 1px solid rgba(240,184,64,0.35);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.45);
+      padding: 18px 20px;
+      z-index: 99999;
+      display: none;
+      font-size: 13.5px;
+      line-height: 1.6;
+    }
+    .cookie-banner.show { display: block; animation: cookieUp 0.35s ease; }
+    @keyframes cookieUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .cookie-banner h4 {
+      font-family: 'Playfair Display', serif;
+      color: var(--gold-light);
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+    .cookie-banner a { color: var(--gold-light); text-decoration: underline; }
+    .cookie-actions {
+      display: flex; gap: 10px; flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .cookie-btn {
+      flex: 1 1 auto;
+      min-width: 130px;
+      padding: 11px 18px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+    }
+    .cookie-btn-accept { background: var(--gold-light); color: var(--dark); }
+    .cookie-btn-accept:hover { background: var(--gold); }
+    .cookie-btn-reject { background: transparent; color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.3); }
+    .cookie-btn-reject:hover { background: rgba(255,255,255,0.08); }
+    .site-footer {
+      background: var(--darker);
+      color: rgba(255,255,255,0.55);
+      text-align: center;
+      padding: 22px 16px;
+      font-size: 13px;
+    }
+    .site-footer a { color: rgba(255,255,255,0.75); text-decoration: underline; }
+    @media (max-width: 580px) {
+      .cookie-banner { font-size: 13px; padding: 16px; }
+      .cookie-btn { min-width: 0; }
+    }
   </style>
 </head>
 <body>
-  <!-- Google Tag Manager (noscript) -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KF2FLHXP"
-  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-  <!-- End Google Tag Manager (noscript) -->
+  <!-- GTM (noscript) removido: o GTM só carrega após consentimento de cookies. -->
 
 <!-- ========== AGE GATE ========== -->
 <div id="ageGate">
@@ -1351,6 +1386,29 @@
   Tire suas dúvidas no WhatsApp
 </a>
 
+<!-- ========== RODAPÉ ========== -->
+<footer class="site-footer">
+  © <span id="footer-year"></span> Cervejaria Mistura Clássica ·
+  <a href="politica-de-privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a> ·
+  <a href="#" onclick="abrirPreferenciasCookies(); return false;">Preferências de cookies</a>
+</footer>
+
+<!-- ========== BANNER DE CONSENTIMENTO DE COOKIES (LGPD) ========== -->
+<div class="cookie-banner" id="cookieBanner" role="dialog" aria-live="polite" aria-label="Aviso de cookies">
+  <h4>🍪 Sua privacidade</h4>
+  <div>
+    Usamos cookies e tecnologias semelhantes (Google e Meta/Facebook) para medir o
+    desempenho do site e melhorar nossos anúncios. Eles só são ativados com a sua
+    autorização. Os dados necessários para processar e entregar o seu pedido são
+    tratados conforme nossa
+    <a href="politica-de-privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a>.
+  </div>
+  <div class="cookie-actions">
+    <button class="cookie-btn cookie-btn-reject" onclick="recusarCookies()">Recusar</button>
+    <button class="cookie-btn cookie-btn-accept" onclick="aceitarCookies()">Aceitar cookies</button>
+  </div>
+</div>
+
 <script>
 // ============================================================
 //  CONFIGURAÇÃO - SUBSTITUA OS VALORES ABAIXO:
@@ -1524,6 +1582,8 @@ function validarBairro(bairro) {
 function confirmAge(isAdult) {
   if (isAdult) {
     document.getElementById('ageGate').style.display = 'none';
+    // Mostra o aviso de cookies se o visitante ainda não escolheu
+    if (lerConsentimento() === null) mostrarBannerCookies();
   } else {
     document.getElementById('ageContent').style.display = 'none';
     document.getElementById('ageDenied').style.display = 'block';
@@ -2348,6 +2408,88 @@ function updateProgress(current) {
   }
 }
 
+
+// ============================================================
+//  CONSENTIMENTO DE COOKIES (LGPD)
+//  GTM e Meta Pixel só carregam APÓS o visitante aceitar.
+// ============================================================
+var COOKIE_CONSENT_KEY = 'mc_cookie_consent';   // 'accepted' | 'rejected'
+var __trackingLoaded = false;
+
+function lerConsentimento() {
+  try { return localStorage.getItem(COOKIE_CONSENT_KEY); }
+  catch (e) { return null; }
+}
+function salvarConsentimento(valor) {
+  try { localStorage.setItem(COOKIE_CONSENT_KEY, valor); }
+  catch (e) { /* modo privado/sem storage: segue sem persistir */ }
+}
+
+// Carrega o Google Tag Manager (GTM-KF2FLHXP)
+function carregarGTM() {
+  (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-KF2FLHXP');
+}
+
+// Carrega o Meta Pixel (2121609558422353) e dispara o PageView
+function carregarMetaPixel() {
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init', '2121609558422353');
+  fbq('track', 'PageView');
+}
+
+// Ativa todo o rastreamento (chamada apenas com consentimento)
+function ativarRastreamento() {
+  if (__trackingLoaded) return;
+  __trackingLoaded = true;
+  try { carregarGTM(); } catch (e) {}
+  try { carregarMetaPixel(); } catch (e) {}
+}
+
+function esconderBannerCookies() {
+  var b = document.getElementById('cookieBanner');
+  if (b) b.classList.remove('show');
+}
+function mostrarBannerCookies() {
+  var b = document.getElementById('cookieBanner');
+  if (b) b.classList.add('show');
+}
+
+function aceitarCookies() {
+  salvarConsentimento('accepted');
+  esconderBannerCookies();
+  ativarRastreamento();
+}
+function recusarCookies() {
+  salvarConsentimento('rejected');
+  esconderBannerCookies();
+  // Nada é carregado. Nenhum dado é enviado ao Google/Meta.
+}
+// Link "Preferências de cookies" no rodapé: reabre o banner
+function abrirPreferenciasCookies() {
+  mostrarBannerCookies();
+}
+
+// Decide o que fazer ao abrir a página
+function initConsentimento() {
+  var c = lerConsentimento();
+  if (c === 'accepted') {
+    ativarRastreamento();          // já consentiu antes -> carrega direto
+  }
+  // se 'rejected' -> não faz nada
+  // se null -> o banner aparece após o usuário confirmar 18+ (ver confirmAge)
+}
+
 // ============================================================
 //  INIT
 // ============================================================
@@ -2366,6 +2508,9 @@ function updateProgress(current) {
   selectPagamento('pix');
   selectTipoCadastro('cpf');
   carregarBairros();
+  initConsentimento();
+  var fy = document.getElementById('footer-year');
+  if (fy) fy.textContent = new Date().getFullYear();
 })();
 </script>
 </body>
