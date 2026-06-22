@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cervejaria Mistura Clássica — Chope gelado pro seu evento</title>
+<meta name="description" content="Chope artesanal direto da nossa cervejaria pro seu evento no Rio de Janeiro. Barril, chopeira e entrega. Calcule quanto chope a sua festa precisa.">
+
+<!-- ===== Verificação de domínio do Facebook (cole o token do site atual) =====
+<meta name="facebook-domain-verification" content="COLE_AQUI_O_TOKEN" />
+-->
+
+<!-- Open Graph (compartilhamento) -->
+<meta property="og:title" content="Cervejaria Mistura Clássica — Chope gelado pro seu evento">
+<meta property="og:description" content="Chope direto da nossa cervejaria pro seu evento. Calcule quantos barris a sua festa precisa.">
+<meta property="og:type" content="website">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Hanken+Grotesk:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --malte:#1B130C;
+    --malte-2:#241A0F;
+    --malte-3:#2F2213;
+    --ambar:#E8A33D;
+    --ambar-claro:#F2C063;
+    --caramelo:#C47A2C;
+    --espuma:#F7F0E1;
+    --espuma-2:#FBF7EE;
+    --texto-suave:#D8C9AE;
+    --texto-fraco:#9C8A6E;
+    --linha:rgba(232,163,61,.18);
+    --raio:18px;
+    --display:'Fraunces',Georgia,serif;
+    --corpo:'Hanken Grotesk',system-ui,sans-serif;
+    --num:'Space Grotesk',monospace;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--malte);
+    color:var(--espuma);
+    font-family:var(--corpo);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  img{max-width:100%;display:block}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:var(--ambar);color:var(--malte)}
+
+  .wrap{width:min(1120px,92vw);margin-inline:auto}
+
+  .eyebrow{
+    font-family:var(--num);
+    font-size:.72rem;
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    color:var(--ambar);
+    display:inline-block;
+    margin-bottom:1rem;
+  }
+
+  h1,h2,h3{font-family:var(--display);font-weight:600;line-height:1.05;letter-spacing:-.01em}
+
+  /* ---------- Botões ---------- */
+  .btn{
+    display:inline-flex;align-items:center;gap:.55rem;
+    font-family:var(--corpo);font-weight:700;font-size:1rem;
+    padding:.95rem 1.7rem;border-radius:999px;border:1px solid transparent;
+    cursor:pointer;transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
+    white-space:nowrap;
+  }
+  .btn--primario{
+    background:linear-gradient(180deg,var(--ambar-claro),var(--ambar));
+    color:#2a1c08;box-shadow:0 10px 30px -8px rgba(232,163,61,.55);
+  }
+  .btn--primario:hover{transform:translateY(-2px);box-shadow:0 16px 38px -8px rgba(232,163,61,.7)}
+  .btn--fantasma{background:transparent;border-color:var(--linha);color:var(--espuma)}
+  .btn--fantasma:hover{border-color:var(--ambar);color:var(--ambar-claro)}
+  .btn:focus-visible{outline:3px solid var(--ambar-claro);outline-offset:3px}
+
+  /* ---------- Topo ---------- */
+  .topo{
+    position:fixed;top:0;left:0;right:0;z-index:40;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:1rem 0;transition:background .3s ease, backdrop-filter .3s ease, padding .3s ease;
+  }
+  .topo.fixo{background:rgba(20,14,8,.82);backdrop-filter:blur(12px);padding:.6rem 0;border-bottom:1px solid var(--linha)}
+  .topo .wrap{display:flex;align-items:center;justify-content:space-between;width:min(1120px,92vw)}
+  .marca{font-family:var(--display);font-weight:700;font-size:1.18rem;letter-spacing:-.02em;color:var(--espuma)}
+  .marca b{color:var(--ambar)}
+  .topo .btn{padding:.65rem 1.3rem;font-size:.92rem}
+
+  /* ---------- Hero ---------- */
+  .hero{position:relative;padding:11rem 0 6rem;overflow:hidden}
+  .hero__bg{
+    position:absolute;inset:0;z-index:0;
+    background:
+      radial-gradient(1200px 600px at 75% -10%, rgba(232,163,61,.22), transparent 60%),
+      radial-gradient(900px 500px at 10% 110%, rgba(196,122,44,.18), transparent 55%),
+      linear-gradient(180deg,var(--malte),var(--malte-2));
+  }
+  .hero .wrap{position:relative;z-index:2;display:grid;grid-template-columns:1.25fr .75fr;gap:3rem;align-items:center}
+  .hero h1{font-size:clamp(2.6rem,6vw,4.6rem)}
+  .hero h1 em{font-style:italic;color:var(--ambar)}
+  .hero p.lead{font-size:clamp(1.05rem,2vw,1.3rem);color:var(--texto-suave);margin:1.4rem 0 2.1rem;max-width:34ch}
+  .hero__ctas{display:flex;gap:.9rem;flex-wrap:wrap}
+  .hero__selo{margin-top:2.2rem;display:flex;gap:1.8rem;flex-wrap:wrap;color:var(--texto-fraco);font-size:.9rem}
+  .hero__selo span{display:flex;align-items:center;gap:.5rem}
+  .hero__selo b{color:var(--espuma);font-family:var(--num);font-weight:600}
+
+  /* copo do hero */
+  .copo-hero{justify-self:center;width:clamp(150px,30vw,230px);aspect-ratio:.62/1;position:relative;filter:drop-shadow(0 30px 40px rgba(0,0,0,.45))}
+  .copo{
+    position:absolute;inset:0;
+    background:linear-gradient(100deg, rgba(255,255,255,.10), rgba(255,255,255,.02) 40%, rgba(255,255,255,.14));
+    border:2px solid rgba(247,240,225,.35);
+    border-radius:10px 10px 26px 26px;
+    clip-path:polygon(8% 0, 92% 0, 84% 100%, 16% 100%);
+    overflow:hidden;
+  }
+  .copo__liquido{
+    position:absolute;left:0;right:0;bottom:0;height:78%;
+    background:linear-gradient(180deg,var(--ambar-claro),var(--caramelo));
+    transition:height .6s cubic-bezier(.2,.8,.2,1);
+  }
+  .copo__espuma{
+    position:absolute;left:-4%;right:-4%;height:16%;top:-9%;
+    background:var(--espuma-2);
+    border-radius:50% 50% 40% 40%/70% 70% 30% 30%;
+    box-shadow:0 6px 10px rgba(0,0,0,.12) inset;
+  }
+  .bolha{position:absolute;background:rgba(255,255,255,.55);border-radius:50%;bottom:6%;animation:sobe linear infinite}
+  @keyframes sobe{0%{transform:translateY(0);opacity:0}10%{opacity:.7}100%{transform:translateY(-220px);opacity:0}}
+
+  /* ---------- Seções ---------- */
+  section{position:relative}
+  .bloco{padding:6rem 0}
+  .bloco--escuro{background:var(--malte-2)}
+  .titulo{font-size:clamp(2rem,4.5vw,3.1rem);max-width:18ch}
+  .sub{color:var(--texto-suave);font-size:1.1rem;max-width:54ch;margin-top:1rem}
+
+  /* História */
+  .historia .wrap{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
+  .historia__texto p{color:var(--texto-suave);margin-top:1.1rem;max-width:48ch}
+  .historia__texto p:first-of-type{margin-top:1.6rem}
+  .historia__quote{
+    border-left:3px solid var(--ambar);padding:.4rem 0 .4rem 1.5rem;margin-top:2rem;
+    font-family:var(--display);font-style:italic;font-size:1.35rem;color:var(--espuma);line-height:1.35;
+  }
+  .historia__arte{
+    aspect-ratio:4/5;border-radius:var(--raio);position:relative;overflow:hidden;
+    background:
+      radial-gradient(600px 300px at 30% 20%, rgba(232,163,61,.4), transparent 60%),
+      linear-gradient(160deg,var(--malte-3),var(--malte));
+    border:1px solid var(--linha);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .historia__arte .glifo{font-family:var(--display);font-size:clamp(5rem,14vw,9rem);color:rgba(247,240,225,.10);font-weight:700;line-height:.8;text-align:center}
+
+  /* Diferenciais */
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:1.4rem;margin-top:3rem}
+  .card{
+    background:linear-gradient(180deg,var(--malte-3),var(--malte-2));
+    border:1px solid var(--linha);border-radius:var(--raio);padding:2rem;
+    transition:transform .2s ease, border-color .2s ease;
+  }
+  .card:hover{transform:translateY(-4px);border-color:var(--ambar)}
+  .card__ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:rgba(232,163,61,.14);color:var(--ambar);margin-bottom:1.1rem}
+  .card h3{font-size:1.4rem;color:var(--espuma)}
+  .card p{color:var(--texto-suave);margin-top:.6rem}
+
+  /* Galeria */
+  .galeria__grid{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:200px;gap:1rem;margin-top:3rem}
+  .shot{
+    position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--linha);
+    background:linear-gradient(150deg,var(--malte-3),var(--malte-2));
+  }
+  .shot:nth-child(1){grid-row:span 2}
+  .shot:nth-child(4){grid-column:span 2}
+  .shot__img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .5s ease}
+  .shot:hover .shot__img{transform:scale(1.05)}
+  .shot__img--empty{opacity:0}
+  .shot__ph{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;
+    color:var(--texto-fraco);font-size:.82rem;letter-spacing:.05em;
+  }
+  .shot__ph svg{opacity:.5}
+
+  /* ---------- Calculadora ---------- */
+  .calc{background:linear-gradient(180deg,var(--malte-2),var(--malte))}
+  .calc__cabeca{text-align:center;max-width:60ch;margin-inline:auto}
+  .calc__cabeca .sub{margin-inline:auto}
+  .calc__corpo{
+    margin-top:3.2rem;display:grid;grid-template-columns:1fr 280px;gap:3rem;align-items:center;
+    background:linear-gradient(180deg,var(--malte-3),var(--malte-2));
+    border:1px solid var(--linha);border-radius:24px;padding:2.6rem;
+  }
+  .calc__controles label{display:block;font-family:var(--num);font-size:.74rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ambar);margin-bottom:.9rem}
+  .calc__num{display:flex;align-items:baseline;gap:.6rem;margin-bottom:1.6rem}
+  .calc__num input{
+    width:130px;background:var(--malte);border:1px solid var(--linha);border-radius:12px;
+    color:var(--espuma);font-family:var(--num);font-size:2.4rem;font-weight:700;padding:.4rem .8rem;text-align:center;
+  }
+  .calc__num input:focus{outline:none;border-color:var(--ambar)}
+  .calc__num span{color:var(--texto-fraco);font-size:1rem}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:999px;
+    background:linear-gradient(90deg,var(--ambar) var(--prog,30%), rgba(247,240,225,.12) var(--prog,30%));
+    cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--ambar-claro);border:4px solid var(--malte-3);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+  input[type=range]::-moz-range-thumb{width:26px;height:26px;border:4px solid var(--malte-3);border-radius:50%;background:var(--ambar-claro)}
+  .calc__escala{display:flex;justify-content:space-between;color:var(--texto-fraco);font-size:.78rem;margin-top:.6rem;font-family:var(--num)}
+
+  .calc__resultado{margin-top:2.2rem;padding-top:2rem;border-top:1px solid var(--linha)}
+  .calc__litros{font-family:var(--num);color:var(--texto-suave);font-size:1rem}
+  .calc__litros b{color:var(--ambar-claro);font-size:1.7rem}
+  .calc__guia{color:var(--texto-suave);font-size:.95rem;margin-top:.9rem}
+  .calc__opcoes{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1.1rem}
+  .calc__opcoes.uma{grid-template-columns:1fr;max-width:340px}
+  .opcao{
+    background:var(--malte);border:1px solid var(--linha);border-radius:16px;padding:1.3rem;
+    display:flex;flex-direction:column;gap:.5rem;animation:pop .35s ease;
+  }
+  .opcao--falte{border-color:rgba(232,163,61,.4)}
+  .opcao__tag{
+    align-self:flex-start;font-family:var(--num);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;
+    padding:.3rem .6rem;border-radius:999px;font-weight:700;
+  }
+  .opcao--eco .opcao__tag{background:rgba(120,170,110,.16);color:#9fd08c}
+  .opcao--falte .opcao__tag{background:rgba(232,163,61,.16);color:var(--ambar-claro)}
+  .opcao__barris{display:flex;gap:.4rem;align-items:flex-end;flex-wrap:wrap;min-height:48px;margin-top:.2rem}
+  .opcao__qtd{font-family:var(--display);font-size:1.25rem;color:var(--espuma);line-height:1.2}
+  .opcao__litros{font-family:var(--num);color:var(--texto-fraco);font-size:.82rem}
+  @keyframes pop{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
+  .calc__cta{margin-top:1.8rem}
+
+  /* copo da calculadora */
+  .calc__visual{display:flex;flex-direction:column;align-items:center;gap:1.3rem}
+  .copo-calc{width:150px;aspect-ratio:.62/1;position:relative;filter:drop-shadow(0 20px 26px rgba(0,0,0,.4))}
+  .barril{display:flex;flex-direction:column;align-items:center;gap:.25rem}
+  .barril svg{display:block}
+  .barril small{font-family:var(--num);font-size:.62rem;color:var(--texto-fraco)}
+
+  /* ---------- CTA final ---------- */
+  .final{padding:7rem 0;text-align:center;background:
+      radial-gradient(800px 400px at 50% 0%, rgba(232,163,61,.22), transparent 60%),
+      var(--malte-2);}
+  .final h2{font-size:clamp(2.2rem,5vw,3.6rem);max-width:16ch;margin-inline:auto}
+  .final p{color:var(--texto-suave);font-size:1.15rem;margin:1.2rem auto 2.4rem;max-width:44ch}
+
+  /* ---------- Rodapé ---------- */
+  footer{padding:3rem 0;border-top:1px solid var(--linha);background:var(--malte)}
+  footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:1.5rem;flex-wrap:wrap}
+  footer .marca{font-size:1.05rem}
+  footer nav{display:flex;gap:1.8rem;color:var(--texto-fraco);font-size:.92rem;flex-wrap:wrap}
+  footer nav a:hover{color:var(--ambar-claro)}
+  footer .creditos{color:var(--texto-fraco);font-size:.82rem;width:100%;text-align:center;margin-top:1.5rem;border-top:1px solid var(--linha);padding-top:1.5rem}
+
+  /* ---------- WhatsApp flutuante ---------- */
+  .zap{
+    position:fixed;right:20px;bottom:20px;z-index:45;
+    width:60px;height:60px;border-radius:50%;background:#25D366;
+    display:grid;place-items:center;box-shadow:0 10px 26px rgba(0,0,0,.4);
+    transition:transform .2s ease;
+  }
+  .zap:hover{transform:scale(1.08)}
+  .zap svg{width:32px;height:32px;fill:#fff}
+
+  /* ---------- Cookies ---------- */
+  .cookies{
+    position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:60;
+    width:min(720px,94vw);background:var(--malte-3);border:1px solid var(--ambar);
+    border-radius:16px;padding:1.3rem 1.5rem;box-shadow:0 20px 50px rgba(0,0,0,.5);
+    display:none;
+  }
+  .cookies.show{display:block}
+  .cookies p{color:var(--texto-suave);font-size:.92rem}
+  .cookies p a{color:var(--ambar-claro);text-decoration:underline}
+  .cookies__acoes{display:flex;gap:.8rem;margin-top:1rem;flex-wrap:wrap}
+  .cookies .btn{padding:.6rem 1.4rem;font-size:.9rem}
+
+  /* ---------- Responsivo ---------- */
+  @media (max-width:860px){
+    .hero{padding:8.5rem 0 4rem}
+    .hero .wrap{grid-template-columns:1fr;gap:2.5rem}
+    .copo-hero{order:-1;width:clamp(130px,40vw,180px)}
+    .historia .wrap{grid-template-columns:1fr;gap:2.5rem}
+    .cards{grid-template-columns:1fr}
+    .galeria__grid{grid-template-columns:repeat(2,1fr);grid-auto-rows:160px}
+    .shot:nth-child(4){grid-column:span 1}
+    .calc__corpo{grid-template-columns:1fr;gap:2.5rem}
+    .calc__visual{order:-1}
+  }
+  @media (max-width:480px){
+    .galeria__grid{grid-template-columns:1fr 1fr;grid-auto-rows:140px}
+    .topo .btn{display:none}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ TOPO ============ -->
+<header class="topo" id="topo">
+  <div class="wrap">
+    <div class="marca">Mistura <b>Clássica</b></div>
+    <a class="btn btn--primario" href="https://deliverymistura.com.br" id="cta-topo">Montar meu pedido</a>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="hero__bg"></div>
+  <div class="wrap">
+    <div class="hero__txt">
+      <span class="eyebrow">Cervejaria · Rio de Janeiro</span>
+      <h1>Seu evento merece um <em>chope de verdade</em>.</h1>
+      <p class="lead">Da nossa cervejaria direto pra sua festa: barril gelado, chopeira instalada e aquele colarinho cremoso do primeiro ao último copo.</p>
+      <div class="hero__ctas">
+        <a class="btn btn--primario" href="https://deliverymistura.com.br" id="cta-hero">Montar meu pedido</a>
+        <a class="btn btn--fantasma" href="#calculadora">Calcular meu chope</a>
+      </div>
+      <div class="hero__selo">
+        <span><b>2 L</b> de chope por convidado</span>
+        <span>Entrega &amp; <b>chopeira inclusa</b></span>
+        <span>Atendimento <b>no WhatsApp</b></span>
+      </div>
+    </div>
+    <div class="copo-hero" aria-hidden="true">
+      <div class="copo">
+        <div class="copo__liquido" style="height:80%">
+          <div class="copo__espuma"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HISTÓRIA ============ -->
+<section class="bloco historia" id="historia">
+  <div class="wrap">
+    <div class="historia__texto">
+      <span class="eyebrow">Nossa história</span>
+      <h2 class="titulo">Começou com a vontade de servir um chope honesto.</h2>
+      <!-- >>> TEXTO PLACEHOLDER: Bernardo, troque pela história real da cervejaria <<< -->
+      <p>A Mistura Clássica nasceu da paixão por aquele momento simples e perfeito: o copo cheio, a espuma na medida e a galera reunida. A gente cansou de ver evento bom com chope morno e mal tirado — e resolveu fazer diferente.</p>
+      <p>Desde então, é cuidado em cada etapa: barril sempre gelado, pressão certa e entrega pontual pra que você só precise pensar em curtir. Pequena no tamanho, clássica no capricho.</p>
+      <blockquote class="historia__quote">"Chope bom não é luxo — é o que transforma uma festa qualquer num evento que a galera lembra."</blockquote>
+    </div>
+    <!-- Espaço de foto da história: suba uma imagem como fotos/historia.jpg
+         (a cervejaria, você/a equipe, os equipamentos...) -->
+    <figure class="historia__arte">
+      <img class="shot__img" src="fotos/historia.jpg" alt="A cervejaria Mistura Clássica" loading="lazy" onerror="this.classList.add('shot__img--empty')">
+      <span class="shot__ph"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>foto da cervejaria</span>
+    </figure>
+  </div>
+</section>
+
+<!-- ============ POR QUE ESCOLHER ============ -->
+<section class="bloco bloco--escuro" id="porque">
+  <div class="wrap">
+    <span class="eyebrow">Por que a Mistura Clássica</span>
+    <h2 class="titulo">Quatro motivos pra deixar o chope com a gente.</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="card__ic" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14l-1 7a6 6 0 0 1-12 0Z"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>
+        </div>
+        <h3>Chope sempre fresco</h3>
+        <p>Barril gelado e pressão certa pra um colarinho cremoso — do primeiro ao último copo da festa.</p>
+      </div>
+      <div class="card">
+        <div class="card__ic" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="12" height="18" rx="3"/><path d="M16 8h3a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-3"/></svg>
+        </div>
+        <h3>Chopeira inclusa</h3>
+        <p>Você não precisa de nada além do copo na mão. A gente leva, instala e ensina a tirar o chope.</p>
+      </div>
+      <div class="card">
+        <div class="card__ic" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        </div>
+        <h3>Entrega no Rio</h3>
+        <p>Levamos até o seu evento e recolhemos depois. Você combina o horário e a gente cuida do resto.</p>
+      </div>
+      <div class="card">
+        <div class="card__ic" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <h3>Atendimento direto</h3>
+        <p>Fala direto com a gente no WhatsApp, sem robô e sem enrolação. Tirou a dúvida, fechou o pedido.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GALERIA ============ -->
+<section class="bloco galeria" id="galeria">
+  <div class="wrap">
+    <span class="eyebrow">A galera nos nossos eventos</span>
+    <h2 class="titulo">Onde tem Mistura Clássica, tem festa boa.</h2>
+    <div class="galeria__grid">
+      <!-- Para usar suas fotos: crie uma pasta "fotos" no repositório e suba os arquivos
+           com os nomes evento-1.jpg, evento-2.jpg ... evento-6.jpg -->
+      <figure class="shot">
+        <img class="shot__img" src="fotos/evento-1.jpg" alt="Galera curtindo chope em evento" loading="lazy" onerror="this.classList.add('shot__img--empty')">
+        <span class="shot__ph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>sua foto aqui</span>
+      </figure>
+      <figure class="shot">
+        <img class="shot__img" src="fotos/evento-2.jpg" alt="Chopeira em evento" loading="lazy" onerror="this.classList.add('shot__img--empty')">
+        <span class="shot__ph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>sua foto aqui</span>
+      </figure>
+      <figure class="shot">
+        <img class="shot__img" src="fotos/evento-3.jpg" alt="Copo de chope com colarinho" loading="lazy" onerror="this.classList.add('shot__img--empty')">
+        <span class="shot__ph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>sua foto aqui</span>
+      </figure>
+      <figure class="shot">
+        <img class="shot__img" src="fotos/evento-4.jpg" alt="Festa com chope Mistura Clássica" loading="lazy" onerror="this.classList.add('shot__img--empty')">
+        <span class="shot__ph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>sua foto aqui</span>
+      </figure>
+      <figure class="shot">
+        <img class="shot__img" src="fotos/evento-5.jpg" alt="Amigos brindando" loading="lazy" onerror="this.classList.add('shot__img--empty')">
+        <span class="shot__ph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>sua foto aqui</span>
+      </figure>
+      <figure class="shot">
+        <img class="shot__img" src="fotos/evento-6.jpg" alt="Barril de chope" loading="lazy" onerror="this.classList.add('shot__img--empty')">
+        <span class="shot__ph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>sua foto aqui</span>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CALCULADORA ============ -->
+<section class="bloco calc" id="calculadora">
+  <div class="wrap">
+    <div class="calc__cabeca">
+      <span class="eyebrow">Calculadora de chope</span>
+      <h2 class="titulo" style="margin-inline:auto">Quanto chope o seu evento precisa?</h2>
+      <p class="sub">Diga quantos convidados vão encarar o chope e a gente sugere os barris. Usamos uma média de <b>2 L por pessoa</b> — é só uma estimativa pra te ajudar a planejar.</p>
+    </div>
+
+    <div class="calc__corpo">
+      <div class="calc__controles">
+        <label for="convidados">Convidados que vão tomar chope</label>
+        <div class="calc__num">
+          <input type="number" id="convidados" min="0" max="500" value="25" inputmode="numeric">
+          <span>pessoas</span>
+        </div>
+        <input type="range" id="slider" min="0" max="300" step="1" value="25" aria-label="Número de convidados">
+        <div class="calc__escala"><span>0</span><span>150</span><span>300+</span></div>
+
+        <div class="calc__resultado">
+          <p class="calc__litros">Consumo estimado: <b id="litros">38 L</b></p>
+          <p class="calc__guia" id="guia">Escolha a opção que faz mais sentido pro seu evento:</p>
+          <div class="calc__opcoes" id="opcoes"></div>
+          <a class="btn btn--primario calc__cta" href="https://deliverymistura.com.br" id="cta-calc">Fazer meu pedido</a>
+        </div>
+      </div>
+
+      <div class="calc__visual" aria-hidden="true">
+        <div class="copo-calc">
+          <div class="copo">
+            <div class="copo__liquido" id="copo-liquido" style="height:40%">
+              <div class="copo__espuma"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA FINAL ============ -->
+<section class="final">
+  <div class="wrap">
+    <h2>Bora marcar o chope do seu evento?</h2>
+    <p>Monte seu pedido em poucos cliques e fale direto com a gente. O chope gelado a gente leva.</p>
+    <a class="btn btn--primario" href="https://deliverymistura.com.br" id="cta-final">Montar meu pedido</a>
+  </div>
+</section>
+
+<!-- ============ RODAPÉ ============ -->
+<footer>
+  <div class="wrap">
+    <div class="marca">Mistura <b>Clássica</b></div>
+    <nav>
+      <a href="#historia">História</a>
+      <a href="#calculadora">Calculadora</a>
+      <a href="https://deliverymistura.com.br">Fazer pedido</a>
+      <a href="/politica-de-privacidade.html">Política de Privacidade</a>
+    </nav>
+    <p class="creditos">© <span id="ano"></span> Cervejaria Mistura Clássica · Chope artesanal · Rio de Janeiro</p>
+  </div>
+</footer>
+
+<!-- ============ WHATSAPP ============ -->
+<!-- Troque SEU_NUMERO pelo mesmo número usado no site (formato 55DDDNUMERO) -->
+<a class="zap" href="https://wa.me/SEU_NUMERO" target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
+  <svg viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 0 1 8.413 3.488 11.824 11.824 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 0 0 1.515 5.26l-.999 3.648 3.74-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+</a>
+
+<!-- ============ BANNER DE COOKIES ============ -->
+<div class="cookies" id="cookies" role="dialog" aria-live="polite" aria-label="Aviso de cookies">
+  <p>Usamos cookies pra entender o desempenho dos nossos anúncios e melhorar a sua experiência. Você pode aceitar ou recusar — sua escolha fica salva. Saiba mais na nossa <a href="/politica-de-privacidade.html">Política de Privacidade</a>.</p>
+  <div class="cookies__acoes">
+    <button class="btn btn--primario" id="cookie-aceitar">Aceitar cookies</button>
+    <button class="btn btn--fantasma" id="cookie-recusar">Recusar</button>
+  </div>
+</div>
+
+<script>
+/* ===================== CONSENTIMENTO (LGPD) ===================== */
+/* Mesma chave usada no site principal pra manter a escolha consistente entre as páginas. */
+var CONSENT_KEY = 'mc_cookie_consent';
+
+function lerConsentimento(){
+  try { return localStorage.getItem(CONSENT_KEY); } catch(e){ return null; }
+}
+function salvarConsentimento(valor){
+  try { localStorage.setItem(CONSENT_KEY, valor); } catch(e){}
+}
+
+/* Carrega GTM + Meta Pixel SOMENTE após o consentimento */
+function carregarRastreamento(){
+  if (window.__mc_tracking_loaded) return;
+  window.__mc_tracking_loaded = true;
+
+  /* Google Tag Manager */
+  (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});
+  var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';
+  j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
+  f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-KF2FLHXP');
+
+  /* Meta Pixel */
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+  n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
+  (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+  fbq('init','914120313472470');
+  fbq('track','PageView');
+}
+
+(function initConsentimento(){
+  var banner = document.getElementById('cookies');
+  var consentimento = lerConsentimento();
+
+  if (consentimento === 'accepted'){
+    carregarRastreamento();
+  } else if (consentimento === 'declined'){
+    /* nada a carregar */
+  } else {
+    banner.classList.add('show');
+  }
+
+  document.getElementById('cookie-aceitar').addEventListener('click', function(){
+    salvarConsentimento('accepted');
+    banner.classList.remove('show');
+    carregarRastreamento();
+  });
+  document.getElementById('cookie-recusar').addEventListener('click', function(){
+    salvarConsentimento('declined');
+    banner.classList.remove('show');
+  });
+})();
+
+/* ===================== CALCULADORA DE CHOPE ===================== */
+var LITROS_POR_CONVIDADO = 2;
+var TAMANHOS = [50, 30]; // barris disponíveis
+
+var elNum    = document.getElementById('convidados');
+var elSlider = document.getElementById('slider');
+var elLitros = document.getElementById('litros');
+var elGuia   = document.getElementById('guia');
+var elOpcoes = document.getElementById('opcoes');
+var elLiquido= document.getElementById('copo-liquido');
+
+/* Lista de combinações viáveis de barris, sempre com no máximo 1 barril de 30 L
+   (o litro do 30 L é mais caro). Retorna uma por capacidade, ordenada,
+   já escolhendo a combinação com menos barris pra cada capacidade. */
+function combosViaveis(ateLitros){
+  var maxA = Math.ceil(ateLitros/50) + 2;
+  var lista = [];
+  for (var a = 0; a <= maxA; a++){
+    for (var b = 0; b <= 1; b++){          // no máximo 1 barril de 30 L
+      var cap = a*50 + b*30;
+      if (cap > 0) lista.push({ a:a, b:b, cap:cap, qtd:a+b });
+    }
+  }
+  lista.sort(function(x,y){ return x.cap - y.cap || x.qtd - y.qtd || x.b - y.b; });
+  var vistos = {}, saida = [];
+  lista.forEach(function(c){ if (!vistos[c.cap]){ vistos[c.cap] = 1; saida.push(c); } });
+  return saida;
+}
+
+/* Sempre devolve dois cenários distintos:
+   - eco  : a maior combinação que NÃO ultrapassa a estimativa (sem desperdício).
+            Se a estimativa for menor que o menor barril, usa o menor barril.
+   - falte: a menor combinação ACIMA do eco (garante folga pra não faltar). */
+function duasOpcoes(litros){
+  var lista = combosViaveis(litros + 100);
+  var eco = null, falte = null;
+  for (var i = 0; i < lista.length; i++){ if (lista[i].cap <= litros) eco = lista[i]; }
+  if (!eco) eco = lista[0];                                   // menor barril (30 L)
+  for (var j = 0; j < lista.length; j++){ if (lista[j].cap >= litros){ falte = lista[j]; break; } }
+  if (!falte) falte = lista[lista.length - 1];
+  if (falte.cap === eco.cap){                                 // garante dois cenários distintos
+    for (var k = 0; k < lista.length; k++){ if (lista[k].cap > eco.cap){ falte = lista[k]; break; } }
+  }
+  return { eco:eco, falte:falte };
+}
+
+function frase(n, tamanho){
+  return n + (n > 1 ? ' barris de ' : ' barril de ') + tamanho + ' L';
+}
+
+function descBarris(o){
+  var partes = [];
+  if (o.a > 0) partes.push(frase(o.a, 50));
+  if (o.b > 0) partes.push(frase(o.b, 30));
+  return partes.join(' + ');
+}
+
+function svgBarril(tamanho){
+  var grande = tamanho === 50;
+  var w = grande ? 34 : 27;
+  var h = grande ? 45 : 36;
+  return '<svg width="'+w+'" height="'+h+'" viewBox="0 0 38 50" fill="none">'
+    + '<path d="M9 2h20c1 6 2 10 2 23S30 42 29 48H9C8 42 7 38 7 25S8 8 9 2Z" fill="#C47A2C" stroke="#E8A33D" stroke-width="1.5"/>'
+    + '<rect x="6" y="16" width="26" height="3.5" fill="#E8A33D"/>'
+    + '<rect x="6" y="30" width="26" height="3.5" fill="#E8A33D"/>'
+    + '</svg>';
+}
+
+function iconesBarris(o){
+  var h = '';
+  for (var i = 0; i < o.a; i++) h += '<div class="barril">'+svgBarril(50)+'<small>50 L</small></div>';
+  for (var j = 0; j < o.b; j++) h += '<div class="barril">'+svgBarril(30)+'<small>30 L</small></div>';
+  return h;
+}
+
+function cardOpcao(o, classe, tag){
+  return '<div class="opcao '+classe+'">'
+    + '<span class="opcao__tag">'+tag+'</span>'
+    + '<div class="opcao__barris">'+iconesBarris(o)+'</div>'
+    + '<p class="opcao__qtd">'+descBarris(o)+'</p>'
+    + '<p class="opcao__litros">'+o.cap+' L no total</p>'
+    + '</div>';
+}
+
+function atualizar(convidados){
+  convidados = Math.max(0, Math.min(500, Math.round(convidados || 0)));
+  var litros = Math.round(convidados * LITROS_POR_CONVIDADO);
+
+  elLitros.textContent = litros + ' L';
+
+  /* copo enche proporcional ao consumo (visual) */
+  var fill = convidados <= 0 ? 0 : Math.max(8, Math.min(94, (litros / 320) * 100));
+  elLiquido.style.height = fill + '%';
+
+  /* slider colorido */
+  var prog = (Math.min(convidados, 300) / 300) * 100;
+  elSlider.style.setProperty('--prog', prog + '%');
+
+  /* nenhum convidado informado */
+  if (convidados <= 0){
+    elGuia.textContent = 'Informe os convidados pra ver a sugestão.';
+    elOpcoes.innerHTML = '';
+    elOpcoes.classList.remove('uma');
+    return;
+  }
+
+  /* até 12 convidados: um barril de 30 L já deve sobrar */
+  if (convidados <= 12){
+    elGuia.textContent = 'Pra até 12 convidados, um barril de 30 L já dá conta — deve até sobrar chope:';
+    elOpcoes.classList.add('uma');
+    elOpcoes.innerHTML = cardOpcao({ a:0, b:1, cap:30, qtd:1 }, 'opcao--falte', 'deve sobrar chope');
+    return;
+  }
+
+  /* acima de 12: sempre os dois cenários pro cliente escolher */
+  var r = duasOpcoes(litros);
+  elGuia.textContent = 'Escolha a opção que faz mais sentido pro seu evento:';
+  elOpcoes.classList.remove('uma');
+  elOpcoes.innerHTML =
+      cardOpcao(r.eco,   'opcao--eco',   'sem desperdício!')
+    + cardOpcao(r.falte, 'opcao--falte', 'prefiro que não falte!');
+}
+
+/* sincroniza campo numérico e slider */
+elNum.addEventListener('input', function(){
+  var v = parseInt(this.value, 10);
+  if (!isNaN(v)) elSlider.value = Math.min(300, v);
+  atualizar(v);
+});
+elSlider.addEventListener('input', function(){
+  elNum.value = this.value;
+  atualizar(parseInt(this.value, 10));
+});
+
+/* estado inicial */
+atualizar(parseInt(elNum.value, 10));
+
+/* ===================== EXTRAS ===================== */
+/* topo fixo ao rolar */
+var topo = document.getElementById('topo');
+window.addEventListener('scroll', function(){
+  if (window.scrollY > 40) topo.classList.add('fixo');
+  else topo.classList.remove('fixo');
+});
+
+/* ano no rodapé */
+document.getElementById('ano').textContent = new Date().getFullYear();
+</script>
+
+</body>
+</html>
