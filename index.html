@@ -2,10 +2,11 @@
 <html lang="pt-BR">
 <head>
   <!--
-    Google Tag Manager e Meta Pixel NÃO são carregados automaticamente.
-    Eles só são ativados após o visitante ACEITAR os cookies no banner de
-    consentimento (ver bloco "CONSENTIMENTO DE COOKIES (LGPD)" no fim do body).
-    IDs: GTM-KF2FLHXP  |  Meta Pixel 2121609558422353
+    Rastreamento com Google Consent Mode v2 (ver bloco "CONSENTIMENTO DE COOKIES"
+    no fim do body). O GTM carrega em todas as visitas, porem em estado de
+    consentimento NEGADO por padrao (sem cookies/dados pessoais ate o aceite);
+    no aceite, o consentimento e atualizado para concedido. O Meta Pixel carrega
+    somente apos o aceite. IDs: GTM-KF2FLHXP | Meta Pixel 2121609558422353
   -->
 
   <!-- Verificação de domínio Meta (apenas verificação, não rastreia) -->
@@ -2520,11 +2521,17 @@ function updateProgress(current) {
 
 
 // ============================================================
-//  CONSENTIMENTO DE COOKIES (LGPD)
-//  GTM e Meta Pixel só carregam APÓS o visitante aceitar.
+//  CONSENTIMENTO DE COOKIES (LGPD) + GOOGLE CONSENT MODE v2
+//  GTM carrega em estado 'negado' por padrao; vira 'concedido' no aceite.
+//  Meta Pixel carrega somente apos o aceite.
 // ============================================================
 var COOKIE_CONSENT_KEY = 'mc_cookie_consent';   // 'accepted' | 'rejected'
-var __trackingLoaded = false;
+var __gtmLoaded = false;
+var __metaLoaded = false;
+
+// dataLayer + gtag: necessarios para o Google Consent Mode v2
+window.dataLayer = window.dataLayer || [];
+function gtag(){ dataLayer.push(arguments); }
 
 function lerConsentimento() {
   try { return localStorage.getItem(COOKIE_CONSENT_KEY); }
@@ -2535,8 +2542,40 @@ function salvarConsentimento(valor) {
   catch (e) { /* modo privado/sem storage: segue sem persistir */ }
 }
 
-// Carrega o Google Tag Manager (GTM-KF2FLHXP)
+// Estado inicial do consentimento = NEGADO (Consent Mode v2), antes de qualquer tag.
+// Sem cookies nem dados pessoais ate o aceite; o Google recebe apenas sinais anonimos.
+function definirConsentPadraoNegado() {
+  gtag('consent', 'default', {
+    'ad_storage': 'denied',
+    'ad_user_data': 'denied',
+    'ad_personalization': 'denied',
+    'analytics_storage': 'denied',
+    'wait_for_update': 500
+  });
+}
+function concederConsentGoogle() {
+  gtag('consent', 'update', {
+    'ad_storage': 'granted',
+    'ad_user_data': 'granted',
+    'ad_personalization': 'granted',
+    'analytics_storage': 'granted'
+  });
+}
+function negarConsentGoogle() {
+  gtag('consent', 'update', {
+    'ad_storage': 'denied',
+    'ad_user_data': 'denied',
+    'ad_personalization': 'denied',
+    'analytics_storage': 'denied'
+  });
+}
+
+// Carrega o Google Tag Manager (GTM-KF2FLHXP).
+// Agora carrega em TODAS as visitas (fica detectavel), mas em estado negado por padrao:
+// nenhum cookie/dado pessoal e enviado enquanto o consentimento nao for concedido.
 function carregarGTM() {
+  if (__gtmLoaded) return;
+  __gtmLoaded = true;
   (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
   new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
   j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
@@ -2544,8 +2583,10 @@ function carregarGTM() {
   })(window,document,'script','dataLayer','GTM-KF2FLHXP');
 }
 
-// Carrega o Meta Pixel (2121609558422353) e dispara o PageView
+// Carrega o Meta Pixel (2121609558422353) e dispara o PageView - somente apos o aceite.
 function carregarMetaPixel() {
+  if (__metaLoaded) return;
+  __metaLoaded = true;
   !function(f,b,e,v,n,t,s)
   {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
   n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -2556,14 +2597,6 @@ function carregarMetaPixel() {
   'https://connect.facebook.net/en_US/fbevents.js');
   fbq('init', '2121609558422353');
   fbq('track', 'PageView');
-}
-
-// Ativa todo o rastreamento (chamada apenas com consentimento)
-function ativarRastreamento() {
-  if (__trackingLoaded) return;
-  __trackingLoaded = true;
-  try { carregarGTM(); } catch (e) {}
-  try { carregarMetaPixel(); } catch (e) {}
 }
 
 function esconderBannerCookies() {
@@ -2578,26 +2611,35 @@ function mostrarBannerCookies() {
 function aceitarCookies() {
   salvarConsentimento('accepted');
   esconderBannerCookies();
-  ativarRastreamento();
+  concederConsentGoogle();                 // Google: libera cookies/medicao completa
+  try { carregarMetaPixel(); } catch (e) {} // Meta: carrega o Pixel apos o aceite
 }
 function recusarCookies() {
   salvarConsentimento('rejected');
   esconderBannerCookies();
-  // Nada é carregado. Nenhum dado é enviado ao Google/Meta.
+  negarConsentGoogle();                     // Google: permanece negado (pings sem cookie)
+  // Meta Pixel NAO e carregado.
 }
-// Link "Preferências de cookies" no rodapé: reabre o banner
+// Link "Preferencias de cookies" no rodape: reabre o banner
 function abrirPreferenciasCookies() {
   mostrarBannerCookies();
 }
 
-// Decide o que fazer ao abrir a página
+// Decide o que fazer ao abrir a pagina
 function initConsentimento() {
+  // 1) Define o estado padrao como NEGADO antes de carregar o GTM
+  definirConsentPadraoNegado();
+  // 2) Carrega o GTM em toda visita (detectavel; sem cookies ate o aceite)
+  try { carregarGTM(); } catch (e) {}
+  // 3) Aplica a escolha anterior, se houver
   var c = lerConsentimento();
   if (c === 'accepted') {
-    ativarRastreamento();          // já consentiu antes -> carrega direto
+    concederConsentGoogle();
+    try { carregarMetaPixel(); } catch (e) {}
+  } else if (c === 'rejected') {
+    negarConsentGoogle();
   }
-  // se 'rejected' -> não faz nada
-  // se null -> o banner aparece após o usuário confirmar 18+ (ver confirmAge)
+  // se null -> o banner aparece apos o usuario confirmar 18+ (ver confirmAge)
 }
 
 // ============================================================
