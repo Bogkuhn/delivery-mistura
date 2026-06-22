@@ -897,7 +897,7 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Local de Instalação da Chopeira <span class="required">*</span></label>
+        <label class="form-label" id="lbl-local-instalacao">Local de Instalação da Chopeira <span class="required">*</span></label>
         <select class="form-select" id="localInstalacao" onchange="toggleLocalOutros(this)">
           <option value="">Selecione o local</option>
           <option value="Apartamento">Apartamento</option>
@@ -1119,7 +1119,7 @@
 
       <div id="hora-marcada-input" style="display:none;margin-top:12px;">
         <div class="form-group">
-          <label class="form-label">Horário exato de entrega desejado</label>
+          <label class="form-label">Horário exato de entrega desejado <span class="required">*</span></label>
           <select class="form-select" id="deliveryTime">
             <option value="">Selecione o horário</option>
             <option value="08:00">08h00</option>
@@ -1136,9 +1136,11 @@
             <option value="19:00">19h00</option>
             <option value="20:00">20h00</option>
           </select>
+          <div class="form-error" id="err-delivery-time">Selecione o horário de entrega.</div>
         </div>
       </div>
 
+      <div id="diarias-section">
       <hr style="border:none;border-top:1px solid var(--border);margin:24px 0;">
       <h3 style="font-family:'Playfair Display',serif;font-size:18px;margin-bottom:6px;">Diárias Extras</h3>
       <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Por padrão, recolhemos o equipamento no dia seguinte ao evento. Precisa de mais tempo?</p>
@@ -1169,14 +1171,15 @@
         </div>
         <div class="delivery-option-price">+ R$ 200</div>
       </div>
+      </div><!-- /diarias-section -->
 
 
       <hr style="border:none;border-top:1px solid var(--border);margin:24px 0;">
       <h3 style="font-family:'Playfair Display',serif;font-size:18px;margin-bottom:6px;">Tipo de Recolha</h3>
-      <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">Como prefere que recolhamos os equipamentos apos o evento?</p>
+      <p id="recolha-subtitle" style="color:var(--muted);font-size:13px;margin-bottom:16px;">Como prefere que recolhamos os equipamentos após o evento?</p>
       <div class="delivery-option selected" id="pick-rota" onclick="selectPickup('rota')">
         <div class="radio-circle"><div class="radio-inner"></div></div>
-        <div class="delivery-option-text"><h4>Rota Compartilhada</h4><p>Recolha padrao entre 08h e 16h. Sem custo adicional.</p></div>
+        <div class="delivery-option-text"><h4>Rota Compartilhada</h4><p id="pick-rota-desc">Recolha padrao entre 08h e 16h. Sem custo adicional.</p></div>
         <div class="delivery-option-price">Incluso</div>
       </div>
       <div class="delivery-option" id="pick-exclusivo" onclick="selectPickup('exclusivo')">
@@ -1185,8 +1188,13 @@
         <div class="delivery-option-price">+ R$ 200</div>
       </div>
       <div id="pickup-hora-input" style="display:none;margin-top:12px;">
+        <div id="pickup-date-wrap" class="form-group" style="display:none;">
+          <label class="form-label">Data da recolha <span class="required">*</span></label>
+          <input type="date" class="form-input" id="pickupDate" min="" max="" onchange="order.pickupDate=this.value">
+          <div class="form-error" id="err-pickup-date">Selecione a data da recolha.</div>
+        </div>
         <div class="form-group">
-          <label class="form-label">Horario exato para recolha</label>
+          <label class="form-label">Horário exato para recolha <span class="required">*</span></label>
           <div id="pickup-date-info" class="info-box" style="display:none;margin-bottom:12px;font-weight:600;color:var(--gold);"></div>
           <select class="form-select" id="pickupTime">
             <option value="">Selecione o horario</option>
@@ -1199,6 +1207,7 @@
             <option value="20:00">20h00</option><option value="21:00">21h00</option>
             <option value="22:00">22h00</option><option value="23:00">23h00</option>
           </select>
+          <div class="form-error" id="err-pickup-time">Selecione o horário da recolha.</div>
         </div>
       </div>
 
@@ -1430,6 +1439,7 @@ const order = {
   delivery: 'rota',
   pickupType: 'rota',
   pickupTime: '',
+  pickupDate: '',
   deliveryTime: '',
   diarias: 0,
   eventDate: '',
@@ -1762,12 +1772,73 @@ function updatePickupDate() {
   }
 }
 
+// Define limites do campo de data da recolha (Somente Barris): do dia do evento ate +7 dias
+function setPickupDateLimits() {
+  var inp = document.getElementById('pickupDate');
+  if (!inp) return;
+  var dateVal = document.getElementById('eventDate').value;
+  if (!dateVal) { inp.min = ''; inp.max = ''; return; }
+  inp.min = dateVal; // mesmo dia permitido
+  var d = new Date(dateVal + 'T12:00:00');
+  d.setDate(d.getDate() + 7);
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  inp.max = y + '-' + m + '-' + dd;
+  // se a data escolhida saiu da faixa (ex.: trocou a data do evento), limpa
+  if (inp.value && (inp.value < inp.min || inp.value > inp.max)) { inp.value = ''; order.pickupDate = ''; }
+}
+
+// Mostra/oculta o campo certo da recolha conforme o servico
+function updatePickupUI() {
+  var isBarris = (order.service === 'barris');
+  var dateWrap = document.getElementById('pickup-date-wrap'); // input de data (Somente Barris)
+  var dateInfo = document.getElementById('pickup-date-info'); // texto auto (Kit/Aluguel)
+  if (isBarris) {
+    if (dateInfo) dateInfo.style.display = 'none';
+    if (dateWrap) dateWrap.style.display = (order.pickupType === 'exclusivo') ? 'block' : 'none';
+    setPickupDateLimits();
+  } else {
+    if (dateWrap) dateWrap.style.display = 'none';
+    if (order.pickupType === 'exclusivo') { updatePickupDate(); }
+    else if (dateInfo) { dateInfo.style.display = 'none'; }
+  }
+}
+
+// Ajusta a etapa Endereco/Data&Entrega conforme o servico escolhido
+function applyDataEntregaUI() {
+  var isBarris = (order.service === 'barris');
+
+  // Rotulo do local (Endereco)
+  var lbl = document.getElementById('lbl-local-instalacao');
+  if (lbl) lbl.innerHTML = (isBarris ? 'Local de Entrega dos Barris' : 'Local de Instalação da Chopeira') + ' <span class="required">*</span>';
+
+  // Secao Diarias Extras (nao faz sentido p/ Somente Barris)
+  var diar = document.getElementById('diarias-section');
+  if (diar) diar.style.display = isBarris ? 'none' : 'block';
+  if (isBarris && order.diarias !== 0) selectDiarias(0);
+
+  // Subtitulo da recolha
+  var rs = document.getElementById('recolha-subtitle');
+  if (rs) rs.textContent = isBarris
+    ? 'Como prefere que recolhamos os barris após o evento?'
+    : 'Como prefere que recolhamos os equipamentos após o evento?';
+
+  // Descricao da Rota Compartilhada
+  var rd = document.getElementById('pick-rota-desc');
+  if (rd) rd.textContent = isBarris
+    ? 'Recolha padrão em até uma semana, a ser combinado com o cliente via WhatsApp. Sem custo adicional'
+    : 'Recolha padrao entre 08h e 16h. Sem custo adicional.';
+
+  updatePickupUI();
+}
+
 function selectPickup(type) {
   order.pickupType = type;
   ['pick-rota','pick-exclusivo'].forEach(function(id){ document.getElementById(id).classList.remove('selected'); });
   document.getElementById('pick-' + type).classList.add('selected');
   document.getElementById('pickup-hora-input').style.display = type === 'exclusivo' ? 'block' : 'none';
-  if (type === 'exclusivo') updatePickupDate();
+  updatePickupUI();
 }
 
 // ============================================================
@@ -1793,6 +1864,7 @@ function selectService(type) {
   order.skipBarris = (type === 'aluguel');
   var minNote = document.getElementById('min-liters-note');
   if (minNote) minNote.style.display = (type === 'barris') ? 'none' : 'inline';
+  applyDataEntregaUI();
   refreshBeerPrices();
 }
 
@@ -1937,7 +2009,7 @@ document.getElementById('eventDate').addEventListener('change', function() {
   order.eventDate = this.value;
   const t = document.getElementById('eventTime').value;
   if (t) updateDeliveryInfo(t);
-  if (order.pickupType === 'exclusivo') updatePickupDate();
+  updatePickupUI();
 });
 document.getElementById('eventTime').addEventListener('change', function() {
   order.eventTime = this.value;
@@ -1966,7 +2038,7 @@ function selectDelivery(type) {
 
 function selectDiarias(n) {
   order.diarias = n;
-  if (order.pickupType === 'exclusivo') updatePickupDate();
+  updatePickupUI();
   ['diar-0','diar-1','diar-2'].forEach(id => document.getElementById(id).classList.remove('selected'));
   document.getElementById('diar-' + n).classList.add('selected');
 }
@@ -2102,12 +2174,29 @@ function goToStep5() {
   document.getElementById('err-time').style.display = 'none';
   order.eventDate = date;
   order.eventTime = time;
+
+  // Tipo de Entrega "Hora Marcada" exige horario
   if (order.delivery === 'exclusivo') {
-    order.deliveryTime = document.getElementById('deliveryTime').value;
+    var dTime = document.getElementById('deliveryTime').value;
+    if (!dTime) { document.getElementById('err-delivery-time').style.display = 'block'; return; }
+    document.getElementById('err-delivery-time').style.display = 'none';
+    order.deliveryTime = dTime;
   }
+
+  // Tipo de Recolha "Hora Marcada" exige horario (todos os servicos) e data (Somente Barris)
   if (order.pickupType === 'exclusivo') {
-    order.pickupTime = document.getElementById('pickupTime').value;
+    if (order.service === 'barris') {
+      var pDate = document.getElementById('pickupDate').value;
+      if (!pDate) { document.getElementById('err-pickup-date').style.display = 'block'; return; }
+      document.getElementById('err-pickup-date').style.display = 'none';
+      order.pickupDate = pDate;
+    }
+    var pTime = document.getElementById('pickupTime').value;
+    if (!pTime) { document.getElementById('err-pickup-time').style.display = 'block'; return; }
+    document.getElementById('err-pickup-time').style.display = 'none';
+    order.pickupTime = pTime;
   }
+
   goToStep(5);
 }
 
@@ -2231,9 +2320,21 @@ function buildResumo() {
   evHtml += resumoItem('Horário de Início', order.eventTime ? order.eventTime.replace(':', 'h') : '');
   evHtml += resumoItem('Tipo de Entrega', order.delivery === 'rota' ? '🚛 Rota Compartilhada (sem custo adicional)' : '⏰ Hora Marcada – Carro Exclusivo (+R$ 200,00)');
   if (order.delivery === 'exclusivo' && order.deliveryTime) evHtml += resumoItem('Horário de Entrega', order.deliveryTime.replace(':', 'h'));
-  const diarText = order.diarias === 0 ? 'Sem diárias extras (recolhimento no dia seguinte)' : (order.diarias === 1 ? '1 Diária Extra (+R$ 150,00)' : '2 Diárias Extras (+R$ 200,00)');
-  evHtml += resumoItem('Diarias Extras', diarText);
-  var pickupTxt = order.pickupType==='rota' ? 'Rota Compartilhada (08h-16h, incluso)' : 'Hora Marcada - Carro Exclusivo (+R$200)'+(order.pickupTime?' - '+order.pickupTime:'');
+  if (order.service !== 'barris') {
+    const diarText = order.diarias === 0 ? 'Sem diárias extras (recolhimento no dia seguinte)' : (order.diarias === 1 ? '1 Diária Extra (+R$ 150,00)' : '2 Diárias Extras (+R$ 200,00)');
+    evHtml += resumoItem('Diarias Extras', diarText);
+  }
+  var pickupTxt;
+  if (order.pickupType === 'rota') {
+    pickupTxt = (order.service === 'barris')
+      ? 'Rota Compartilhada (recolha em até 1 semana, a combinar via WhatsApp, sem custo)'
+      : 'Rota Compartilhada (08h-16h, incluso)';
+  } else {
+    var pdFmt = (order.service === 'barris' && order.pickupDate) ? order.pickupDate.split('-').reverse().join('/') : '';
+    pickupTxt = 'Hora Marcada - Carro Exclusivo (+R$200)'
+      + (pdFmt ? ' – ' + pdFmt : '')
+      + (order.pickupTime ? (pdFmt ? ' às ' : ' - ') + order.pickupTime : '');
+  }
   evHtml += resumoItem('Tipo de Recolha', pickupTxt);
   document.getElementById('resumo-evento').innerHTML = evHtml;
 
@@ -2244,7 +2345,7 @@ function buildResumo() {
   if (order.tipoCadastro === 'cpf' && order.dataNascimento) dadosHtml += resumoItem('Data de Nasc.', order.dataNascimento.split('-').reverse().join('/'));
   const endFull = order.logradouro + ', ' + order.numero + (order.complemento ? ' – ' + order.complemento : '') + ', ' + order.bairro + ', ' + order.cidadeEstado + ' – CEP: ' + order.cep;
   dadosHtml += resumoItem('Endereço do Evento', endFull);
-  dadosHtml += resumoItem('Local da Instalação', localInstalacaoLabel());
+  dadosHtml += resumoItem(order.service === 'barris' ? 'Local de Entrega' : 'Local da Instalação', localInstalacaoLabel());
   if (order.outraPessoa) dadosHtml += resumoItem('Responsável pelo Local', order.nomeOutra + ' – ' + order.telOutra);
   if (order.observacoes) dadosHtml += resumoItem('Observações', order.observacoes);
   document.getElementById('resumo-dados').innerHTML = dadosHtml;
@@ -2359,8 +2460,17 @@ function sendWhatsapp() {
   msg += '  • Horário início: ' + (order.eventTime || '—') + '\n';
   msg += '  • Entrega: ' + (order.delivery === 'rota' ? 'Rota Compartilhada' : 'Hora Marcada – Carro Exclusivo (+R$ 200)') + '\n';
   if (order.delivery === 'exclusivo' && order.deliveryTime) msg += '  • Horário entrega: ' + order.deliveryTime + '\n';
-  msg += '  - Diarias extras: ' + (order.diarias===0?'Nenhuma':order.diarias+'x (+R$'+(order.diarias===1?'150':'200')+')') + '\n';
-  msg += '  - Recolha: '+(order.pickupType==='rota'?'Rota Compartilhada (08h-16h)':'Hora Marcada - Carro Exclusivo (+R$200)'+(order.pickupTime?' as '+order.pickupTime:''))+'\n\n';
+  if (order.service !== 'barris') {
+    msg += '  - Diarias extras: ' + (order.diarias===0?'Nenhuma':order.diarias+'x (+R$'+(order.diarias===1?'150':'200')+')') + '\n';
+  }
+  var recolhaMsg;
+  if (order.pickupType === 'rota') {
+    recolhaMsg = (order.service === 'barris') ? 'Rota Compartilhada (em ate 1 semana, a combinar via WhatsApp)' : 'Rota Compartilhada (08h-16h)';
+  } else {
+    var pdMsg = (order.service === 'barris' && order.pickupDate) ? order.pickupDate.split('-').reverse().join('/') : '';
+    recolhaMsg = 'Hora Marcada - Carro Exclusivo (+R$200)' + (pdMsg ? ' em ' + pdMsg : '') + (order.pickupTime ? ' as ' + order.pickupTime : '');
+  }
+  msg += '  - Recolha: ' + recolhaMsg + '\n\n';
 
   msg += '📋 *DADOS:*\n';
   msg += '  • ' + (order.tipoCadastro === 'cpf' ? 'Nome' : 'Razão Social') + ': ' + order.nome + '\n';
@@ -2370,7 +2480,7 @@ function sendWhatsapp() {
   msg += '  • Bairro: ' + order.bairro + '\n';
   msg += '  • Cidade: ' + order.cidadeEstado + '\n';
   msg += '  • CEP: ' + order.cep + '\n';
-  msg += '  • Local instalação: ' + localInstalacaoLabel() + '\n';
+  msg += '  • ' + (order.service === 'barris' ? 'Local de entrega' : 'Local instalação') + ': ' + localInstalacaoLabel() + '\n';
   if (order.outraPessoa) msg += '  • Responsável local: ' + order.nomeOutra + ' (' + order.telOutra + ')\n';
   if (order.observacoes) msg += '  • Obs: ' + order.observacoes + '\n';
   msg += '\n';
@@ -2508,6 +2618,7 @@ function initConsentimento() {
   selectPagamento('pix');
   selectTipoCadastro('cpf');
   carregarBairros();
+  applyDataEntregaUI();
   initConsentimento();
   var fy = document.getElementById('footer-year');
   if (fy) fy.textContent = new Date().getFullYear();
