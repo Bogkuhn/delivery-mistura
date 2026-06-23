@@ -148,19 +148,15 @@
   .historia .wrap{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
   .historia__texto p{color:var(--texto-suave);margin-top:1.1rem;max-width:48ch}
   .historia__texto p:first-of-type{margin-top:1.6rem}
-  .historia__quote{
-    border-left:3px solid var(--ambar);padding:.4rem 0 .4rem 1.5rem;margin-top:2rem;
-    font-family:var(--display);font-style:italic;font-size:1.35rem;color:var(--espuma);line-height:1.35;
-  }
-  .historia__arte{
-    aspect-ratio:4/5;border-radius:var(--raio);position:relative;overflow:hidden;
-    background:
-      radial-gradient(600px 300px at 30% 20%, rgba(232,163,61,.4), transparent 60%),
-      linear-gradient(160deg,var(--malte-3),var(--malte));
+  .historia__arte{margin:0}
+  .historia__arte img{
+    width:100%;height:auto;display:block;border-radius:var(--raio);
     border:1px solid var(--linha);
-    display:flex;align-items:center;justify-content:center;
   }
-  .historia__arte .glifo{font-family:var(--display);font-size:clamp(5rem,14vw,9rem);color:rgba(247,240,225,.10);font-weight:700;line-height:.8;text-align:center}
+  .historia__arte figcaption{
+    margin-top:.8rem;font-family:var(--num);font-size:.8rem;letter-spacing:.04em;
+    color:var(--texto-fraco);text-align:center;
+  }
 
   /* Diferenciais */
   .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:1.4rem;margin-top:3rem}
@@ -174,22 +170,14 @@
   .card h3{font-size:1.4rem;color:var(--espuma)}
   .card p{color:var(--texto-suave);margin-top:.6rem}
 
-  /* Galeria */
-  .galeria__grid{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:200px;gap:1rem;margin-top:3rem}
+  /* Galeria — mosaico masonry que respeita a orientação de cada foto */
+  .galeria__grid{columns:3;column-gap:1rem;margin-top:3rem}
   .shot{
-    position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--linha);
-    background:linear-gradient(150deg,var(--malte-3),var(--malte-2));
+    break-inside:avoid;margin:0 0 1rem;border-radius:14px;overflow:hidden;
+    border:1px solid var(--linha);background:var(--malte-3);
   }
-  .shot:nth-child(1){grid-row:span 2}
-  .shot:nth-child(4){grid-column:span 2}
-  .shot__img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .5s ease}
-  .shot:hover .shot__img{transform:scale(1.05)}
-  .shot__img--empty{opacity:0}
-  .shot__ph{
-    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;
-    color:var(--texto-fraco);font-size:.82rem;letter-spacing:.05em;
-  }
-  .shot__ph svg{opacity:.5}
+  .shot img{width:100%;height:auto;display:block;transition:transform .5s ease}
+  .shot:hover img{transform:scale(1.05)}
 
   /* ---------- Calculadora ---------- */
   .calc{background:linear-gradient(180deg,var(--malte-2),var(--malte))}
@@ -292,13 +280,13 @@
     .copo-hero{order:-1;width:clamp(130px,40vw,180px)}
     .historia .wrap{grid-template-columns:1fr;gap:2.5rem}
     .cards{grid-template-columns:1fr}
-    .galeria__grid{grid-template-columns:repeat(2,1fr);grid-auto-rows:160px}
-    .shot:nth-child(4){grid-column:span 1}
+    .galeria__grid{columns:2}
     .calc__corpo{grid-template-columns:1fr;gap:2.5rem}
     .calc__visual{order:-1}
   }
   @media (max-width:480px){
-    .galeria__grid{grid-template-columns:1fr 1fr;grid-auto-rows:140px}
+    .galeria__grid{columns:2;column-gap:.7rem}
+    .shot{margin-bottom:.7rem}
     .topo .btn{display:none}
   }
 
@@ -350,17 +338,13 @@
   <div class="wrap">
     <div class="historia__texto">
       <span class="eyebrow">Nossa história</span>
-      <h2 class="titulo">Começou com a vontade de servir um chope honesto.</h2>
-      <!-- >>> TEXTO PLACEHOLDER: Bernardo, troque pela história real da cervejaria <<< -->
-      <p>A Mistura Clássica nasceu da paixão por aquele momento simples e perfeito: o copo cheio, a espuma na medida e a galera reunida. A gente cansou de ver evento bom com chope morno e mal tirado — e resolveu fazer diferente.</p>
-      <p>Desde então, é cuidado em cada etapa: barril sempre gelado, pressão certa e entrega pontual pra que você só precise pensar em curtir. Pequena no tamanho, clássica no capricho.</p>
-      <blockquote class="historia__quote">"Chope bom não é luxo — é o que transforma uma festa qualquer num evento que a galera lembra."</blockquote>
+      <h2 class="titulo">Começou com a vontade de servir um chope espetacular.</h2>
+      <p>Fundada em 2003, é pioneira no ramo da cerveja artesanal no Brasil. Coleciona incontáveis medalhas e amantes do chope por todo o país. Suas cervejas são elaboradas com foco na qualidade e são distribuídas muito frescas do tanque diretamente para o copo.</p>
+      <p>Cada ingrediente é selecionado com o máximo de cuidado, cada receita é feita com muita paixão, e todas as etapas de produção e logística são executadas com dedicação de modo que a cerveja transforme o evento naquela festa inesquecível.</p>
     </div>
-    <!-- Espaço de foto da história: suba uma imagem como fotos/historia.jpg
-         (a cervejaria, você/a equipe, os equipamentos...) -->
     <figure class="historia__arte">
-      <img class="shot__img" src="fotos/historia.jpg" alt="A cervejaria Mistura Clássica" loading="lazy" onerror="this.classList.add('shot__img--empty')">
-      <span class="shot__ph"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>foto da cervejaria</span>
+      <img src="fotos/fabrica.jpg" alt="Interior da fábrica da Cervejaria Mistura Clássica, com tanques de produção e clientes" loading="lazy">
+      <figcaption>1ª planta fabril fundada em 2003 em Volta Redonda</figcaption>
     </figure>
   </div>
 </section>
@@ -376,28 +360,28 @@
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h14l-1 7a6 6 0 0 1-12 0Z"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>
         </div>
         <h3>Chope sempre fresco</h3>
-        <p>Barril gelado e pressão certa pra um colarinho cremoso — do primeiro ao último copo da festa.</p>
+        <p>O chope que chega na sua festa é recém saído do tanque.</p>
       </div>
       <div class="card">
         <div class="card__ic" aria-hidden="true">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="12" height="18" rx="3"/><path d="M16 8h3a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-3"/></svg>
         </div>
         <h3>Chopeira inclusa</h3>
-        <p>Você não precisa de nada além do copo na mão. A gente leva, instala e ensina a tirar o chope.</p>
+        <p>Você não precisa de nada além da sua sede. A gente leva, instala e ensina a tirar o chope (inclusive os copos).</p>
       </div>
       <div class="card">
         <div class="card__ic" aria-hidden="true">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><path d="M9 14.5 8 22l4-2 4 2-1-7.5"/></svg>
         </div>
-        <h3>Entrega no Rio</h3>
-        <p>Levamos até o seu evento e recolhemos depois. Você combina o horário e a gente cuida do resto.</p>
+        <h3>Qualidade indiscutível</h3>
+        <p>A cerveja é feita na fábrica mais moderna do estado com ingredientes premium e entregue muito fresca no seu evento. A satisfação é unanimidade.</p>
       </div>
       <div class="card">
         <div class="card__ic" aria-hidden="true">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         </div>
         <h3>Atendimento direto</h3>
-        <p>Fala direto com a gente no WhatsApp, sem robô e sem enrolação. Tirou a dúvida, fechou o pedido.</p>
+        <p>Site completo onde você tira todas as suas dúvidas com facilidade, e atendimento humanizado no WhatsApp, sem enrolação de robô.</p>
       </div>
     </div>
   </div>
@@ -409,31 +393,26 @@
     <span class="eyebrow">A galera nos nossos eventos</span>
     <h2 class="titulo">Onde tem Mistura Clássica, tem festa boa.</h2>
     <div class="galeria__grid">
-      <!-- Para usar suas fotos: crie uma pasta "fotos" no repositório e suba os arquivos
-           com os nomes evento-1.jpg, evento-2.jpg ... evento-6.jpg -->
       <figure class="shot">
-        <img class="shot__img" src="fotos/evento-1.jpg" alt="Galera curtindo chope em evento" loading="lazy" onerror="this.classList.add('shot__img--empty')">
-        <span class="shot__ph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>sua foto aqui</span>
+        <img src="fotos/foto-3.jpg" alt="Equipe da Mistura Clássica comemorando medalhas de ouro nos 20 anos da cervejaria" loading="lazy">
       </figure>
       <figure class="shot">
-        <img class="shot__img" src="fotos/evento-2.jpg" alt="Chopeira em evento" loading="lazy" onerror="this.classList.add('shot__img--empty')">
-        <span class="shot__ph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>sua foto aqui</span>
+        <img src="fotos/foto-5.jpg" alt="Mascote da Mistura Clássica com o cão da marca no estande de eventos" loading="lazy">
       </figure>
       <figure class="shot">
-        <img class="shot__img" src="fotos/evento-3.jpg" alt="Copo de chope com colarinho" loading="lazy" onerror="this.classList.add('shot__img--empty')">
-        <span class="shot__ph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>sua foto aqui</span>
+        <img src="fotos/foto-4.jpg" alt="Variedade de cervejas artesanais Mistura Clássica enfileiradas" loading="lazy">
       </figure>
       <figure class="shot">
-        <img class="shot__img" src="fotos/evento-4.jpg" alt="Festa com chope Mistura Clássica" loading="lazy" onerror="this.classList.add('shot__img--empty')">
-        <span class="shot__ph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>sua foto aqui</span>
+        <img src="fotos/foto-7.jpg" alt="Mascote da Mistura Clássica com uma garrafa em festival de cerveja" loading="lazy">
       </figure>
       <figure class="shot">
-        <img class="shot__img" src="fotos/evento-5.jpg" alt="Amigos brindando" loading="lazy" onerror="this.classList.add('shot__img--empty')">
-        <span class="shot__ph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>sua foto aqui</span>
+        <img src="fotos/foto-1.jpg" alt="Brinde com chope Mistura Clássica no balcão da chopeira" loading="lazy">
       </figure>
       <figure class="shot">
-        <img class="shot__img" src="fotos/evento-6.jpg" alt="Barril de chope" loading="lazy" onerror="this.classList.add('shot__img--empty')">
-        <span class="shot__ph"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>sua foto aqui</span>
+        <img src="fotos/foto-6.jpg" alt="Garrafa da cerveja Pilsen Puro Malte da Mistura Clássica" loading="lazy">
+      </figure>
+      <figure class="shot">
+        <img src="fotos/foto-2.jpg" alt="Cão mascote com uma taça de chope no festival Mondial de la Bière" loading="lazy">
       </figure>
     </div>
   </div>
