@@ -2670,7 +2670,7 @@ function updateProgress(current) {
 //  GTM carrega em estado 'negado' por padrao; vira 'concedido' no aceite.
 //  Meta Pixel carrega somente apos o aceite.
 // ============================================================
-var COOKIE_CONSENT_KEY = 'mc_cookie_consent';   // 'accepted' | 'rejected'
+var COOKIE_CONSENT_KEY = 'mc_cookie_consent';   // 'accepted' | 'declined' (mesma chave/valores da landing /lp)
 var __gtmLoaded = false;
 var __metaLoaded = false;
 
@@ -2695,6 +2695,9 @@ function definirConsentPadraoNegado() {
     'ad_user_data': 'denied',
     'ad_personalization': 'denied',
     'analytics_storage': 'denied',
+    'functionality_storage': 'denied',
+    'personalization_storage': 'denied',
+    'security_storage': 'granted',
     'wait_for_update': 500
   });
 }
@@ -2703,7 +2706,9 @@ function concederConsentGoogle() {
     'ad_storage': 'granted',
     'ad_user_data': 'granted',
     'ad_personalization': 'granted',
-    'analytics_storage': 'granted'
+    'analytics_storage': 'granted',
+    'functionality_storage': 'granted',
+    'personalization_storage': 'granted'
   });
 }
 function negarConsentGoogle() {
@@ -2711,7 +2716,9 @@ function negarConsentGoogle() {
     'ad_storage': 'denied',
     'ad_user_data': 'denied',
     'ad_personalization': 'denied',
-    'analytics_storage': 'denied'
+    'analytics_storage': 'denied',
+    'functionality_storage': 'denied',
+    'personalization_storage': 'denied'
   });
 }
 
@@ -2760,7 +2767,7 @@ function aceitarCookies() {
   try { carregarMetaPixel(); } catch (e) {} // Meta: carrega o Pixel apos o aceite
 }
 function recusarCookies() {
-  salvarConsentimento('rejected');
+  salvarConsentimento('declined');
   esconderBannerCookies();
   negarConsentGoogle();                     // Google: permanece negado (pings sem cookie)
   // Meta Pixel NAO e carregado.
@@ -2781,7 +2788,7 @@ function initConsentimento() {
   if (c === 'accepted') {
     concederConsentGoogle();
     try { carregarMetaPixel(); } catch (e) {}
-  } else if (c === 'rejected') {
+  } else if (c === 'declined') {
     negarConsentGoogle();
   }
   // se null -> o banner aparece apos o usuario confirmar 18+ (ver confirmAge)
