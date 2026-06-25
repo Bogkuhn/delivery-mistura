@@ -730,6 +730,50 @@ window.addEventListener('scroll', function(){
 
 /* ano no rodapé */
 document.getElementById('ano').textContent = new Date().getFullYear();
+
+/* ===================== MEDIÇÃO PRÓPRIA (Google Sheets) ===================== */
+/* Independente da agência. Cole a URL do "app da Web" publicado no Apps Script.
+   Use a MESMA URL e a MESMA chave do site. */
+var MC_TRACK_URL   = 'https://script.google.com/macros/s/AKfycbyScvkqB0NT6nzM9boOhPeER2KB17UU1x5esPvu2n6sT_hlmJ0dIclOf_RgU7lvLaYZ/exec';
+var MC_TRACK_CHAVE = 'mistura-2026'; // igual à CHAVE_SECRETA do Apps Script
+var MC_PAGINA      = 'lp';
+
+function mcTrack(evento, dados) {
+  try {
+    if (!MC_TRACK_URL || MC_TRACK_URL.indexOf('COLE_AQUI') === 0) return;
+    var payload = JSON.stringify({
+      chave: MC_TRACK_CHAVE,
+      evento: evento,
+      pagina: MC_PAGINA,
+      url: location.href,
+      dados: dados || {}
+    });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(MC_TRACK_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
+    } else {
+      fetch(MC_TRACK_URL, { method: 'POST', body: payload, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, keepalive: true }).catch(function(){});
+    }
+  } catch (e) {}
+}
+
+/* 1) Visita à landing page */
+mcTrack('visita_lp', {});
+
+/* 2) Cliques nos botões "Montar/Fazer meu pedido" (CTA -> formulário) */
+(function () {
+  var ctas = document.querySelectorAll('a[href^="https://deliverymistura.com.br"]');
+  for (var i = 0; i < ctas.length; i++) {
+    ctas[i].addEventListener('click', function () {
+      mcTrack('clique_montar_pedido', { origem: this.id || 'cta' });
+    });
+  }
+})();
+
+/* 3) Clique no botão flutuante de WhatsApp (tirar dúvidas) */
+(function () {
+  var zap = document.querySelector('.zap');
+  if (zap) zap.addEventListener('click', function () { mcTrack('whatsapp_duvida', {}); });
+})();
 </script>
 
 </body>
