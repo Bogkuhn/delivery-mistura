@@ -1404,6 +1404,12 @@
         <div class="form-error" id="err-nasc">Data de nascimento é obrigatória.</div>
       </div>
 
+      <div class="form-group">
+        <label class="form-label">Telefone / WhatsApp <span class="required">*</span></label>
+        <input type="tel" class="form-input" id="telefone" placeholder="(21) 9 0000-0000" oninput="maskTel(this)" maxlength="16">
+        <div class="form-error" id="err-tel">Telefone é obrigatório.</div>
+      </div>
+
       
       <!-- Evento em endereço de outra pessoa -->
       <div class="form-group" style="margin-top:24px;">
@@ -1620,6 +1626,7 @@ const order = {
   eventTime: '',
   tipoCadastro: 'cpf',
   nome: '',
+  telefone: '',
   documento: '',
   dataNascimento: '',
   cep: '',
@@ -2386,6 +2393,10 @@ function goToStep6() {
   if (doc.length < docMinLen) { document.getElementById('err-doc').style.display = 'block'; valid = false; }
   else document.getElementById('err-doc').style.display = 'none';
 
+  const tel = document.getElementById('telefone').value.replace(/\D/g,'');
+  if (tel.length < 10) { document.getElementById('err-tel').style.display = 'block'; valid = false; }
+  else document.getElementById('err-tel').style.display = 'none';
+
   const cep = document.getElementById('cep').value.replace(/\D/g,'');
   if (cep.length < 8) { document.getElementById('err-cep').style.display = 'block'; valid = false; }
   else document.getElementById('err-cep').style.display = 'none';
@@ -2409,6 +2420,7 @@ function goToStep6() {
   if (!valid) { window.scrollTo(0,0); return; }
 
   order.nome = nome;
+  order.telefone = document.getElementById('telefone').value;
   order.documento = document.getElementById('documento').value;
   order.dataNascimento = document.getElementById('dataNascimento').value;
   // address already saved in goToStep3
@@ -2517,6 +2529,7 @@ function buildResumo() {
   let dadosHtml = '';
   dadosHtml += resumoItem(order.tipoCadastro === 'cpf' ? 'Nome' : 'Razão Social', order.nome);
   dadosHtml += resumoItem(order.tipoCadastro === 'cpf' ? 'CPF' : 'CNPJ', order.documento);
+  dadosHtml += resumoItem('Telefone / WhatsApp', order.telefone);
   if (order.tipoCadastro === 'cpf' && order.dataNascimento) dadosHtml += resumoItem('Data de Nasc.', order.dataNascimento.split('-').reverse().join('/'));
   const endFull = order.logradouro + ', ' + order.numero + (order.complemento ? ' – ' + order.complemento : '') + ', ' + order.bairro + ', ' + order.cidadeEstado + ' – CEP: ' + order.cep;
   dadosHtml += resumoItem('Endereço do Evento', endFull);
@@ -2650,6 +2663,7 @@ function sendWhatsapp() {
   msg += '📋 *DADOS:*\n';
   msg += '  • ' + (order.tipoCadastro === 'cpf' ? 'Nome' : 'Razão Social') + ': ' + order.nome + '\n';
   msg += '  • ' + (order.tipoCadastro === 'cpf' ? 'CPF' : 'CNPJ') + ': ' + order.documento + '\n';
+  msg += '  • Telefone/WhatsApp: ' + order.telefone + '\n';
   if (order.tipoCadastro === 'cpf' && order.dataNascimento) msg += '  • Nasc.: ' + order.dataNascimento.split('-').reverse().join('/') + '\n';
   msg += '  • Endereço: ' + order.logradouro + ', ' + order.numero + (order.complemento ? ' – ' + order.complemento : '') + '\n';
   msg += '  • Bairro: ' + order.bairro + '\n';
@@ -2695,7 +2709,8 @@ function sendWhatsapp() {
       endereco: (order.logradouro || '') + ', ' + (order.numero || '') + (order.complemento ? ' - ' + order.complemento : ''),
       cep: order.cep || '',
       frete: order.freteExtra || 0,
-      nome: order.nome || ''
+      nome: order.nome || '',
+      telefone: order.telefone || ''
     });
   } catch (e) { /* nunca interrompe o envio */ }
 
