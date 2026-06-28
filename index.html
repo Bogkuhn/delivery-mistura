@@ -2736,6 +2736,79 @@ function baixarComprovantePDF() {
   });
 }
 
+// Monta o RESUMO COMPLETO do pedido (uso interno: planilha + e-mail).
+// Vai por Google Sheets e e-mail (fora do WhatsApp/Meta).
+// Não inclui CPF/CNPJ nem data de nascimento (linha LGPD).
+function montarResumoCompleto() {
+  var dateFormatted = order.eventDate ? order.eventDate.split('-').reverse().join('/') : '';
+  var total = calcTotal();
+  var L = [];
+  L.push('PEDIDO ' + (order.numeroPedido || ''));
+  L.push('========================');
+  L.push('SERVIÇO: ' + serviceLabel());
+  if (order.service !== 'barris') L.push('CHOPEIRA: ' + choperaLabel());
+  if (order.service === 'aluguel') L.push('Aluguel de equipamentos: R$ 250,00');
+  L.push('');
+
+  if (!order.skipBarris) {
+    L.push('ITENS:');
+    if (order.beers) {
+      BEER_CATALOG.forEach(function (beer) {
+        beer.sizes.forEach(function (sz) {
+          var qty = order.beers[beer.id + '_' + sz.l] || 0;
+          if (qty > 0) {
+            var pw = order.service === 'barris' ? sz.priceBarris : sz.priceKit;
+            L.push('  - ' + qty + 'x ' + beer.name + ' ' + sz.l + 'L - ' + fmt(pw * qty));
+          }
+        });
+      });
+    }
+    var tb = calcFreeCups();
+    if (tb > 0) L.push('  - Copos de brinde: ' + tb + ' fardo(s) de 50 copos');
+    if (order.extraCups > 0) L.push('  - Copos extras: ' + order.extraCups + ' fardo(s) - ' + fmt(order.extraCups * 20));
+    var kd = calcKitDiscount();
+    if (kd > 0) L.push('  - Desconto R$1/litro (' + calcTotalLiters() + 'L): -' + fmt(kd));
+    L.push('  Subtotal itens: ' + fmt(calcBeerTotal() + (order.extraCups || 0) * 20));
+    L.push('');
+  }
+
+  L.push('EVENTO:');
+  L.push('  - Data: ' + dateFormatted);
+  L.push('  - Horário de início: ' + (order.eventTime || '—'));
+  L.push('  - Entrega: ' + (order.delivery === 'rota' ? 'Rota Compartilhada' : 'Hora Marcada – Carro Exclusivo (+R$ 200)'));
+  if (order.delivery === 'exclusivo' && order.deliveryTime) L.push('  - Horário de entrega: ' + order.deliveryTime);
+  if (order.service !== 'barris') {
+    L.push('  - Diárias extras: ' + (order.diarias === 0 ? 'Nenhuma' : order.diarias + 'x (+R$' + (order.diarias === 1 ? '150' : '200') + ')'));
+  }
+  var recolhaMsg;
+  if (order.pickupType === 'rota') {
+    recolhaMsg = (order.service === 'barris') ? 'Rota Compartilhada (em até 1 semana, a combinar)' : 'Rota Compartilhada (08h-16h)';
+  } else {
+    var pdMsg = (order.service === 'barris' && order.pickupDate) ? order.pickupDate.split('-').reverse().join('/') : '';
+    recolhaMsg = 'Hora Marcada - Carro Exclusivo (+R$200)' + (pdMsg ? ' em ' + pdMsg : '') + (order.pickupTime ? ' às ' + order.pickupTime : '');
+  }
+  L.push('  - Recolha: ' + recolhaMsg);
+  L.push('');
+
+  L.push('DADOS DO CLIENTE:');
+  L.push('  - ' + (order.tipoCadastro === 'cpf' ? 'Nome' : 'Razão Social') + ': ' + order.nome);
+  L.push('  - Telefone/WhatsApp: ' + order.telefone);
+  if (order.email) L.push('  - E-mail: ' + order.email);
+  L.push('  - Endereço: ' + order.logradouro + ', ' + order.numero + (order.complemento ? ' – ' + order.complemento : ''));
+  L.push('  - Bairro: ' + order.bairro);
+  L.push('  - Cidade: ' + order.cidadeEstado);
+  L.push('  - CEP: ' + order.cep);
+  L.push('  - ' + (order.service === 'barris' ? 'Local de entrega' : 'Local de instalação') + ': ' + localInstalacaoLabel());
+  if (order.outraPessoa) L.push('  - Responsável no local: ' + order.nomeOutra + ' (' + order.telOutra + ')');
+  if (order.observacoes) L.push('  - Observações: ' + order.observacoes);
+  L.push('');
+
+  if (order.freteExtra > 0) L.push('FRETE: ' + fmt(order.freteExtra) + ' (bairro: ' + order.bairro + ')');
+  L.push('PAGAMENTO: ' + (order.pagamento === 'pix' ? 'PIX' : 'Cartão (link de pagamento)'));
+  L.push('TOTAL ESTIMADO: ' + fmt(total));
+  return L.join('\n');
+}
+
 function sendWhatsapp() {
   const total = calcTotal();
 
@@ -2773,6 +2846,7 @@ function sendWhatsapp() {
     }
     mcTrack('pedido_enviado', {
       numero_pedido: order.numeroPedido || '',
+      resumo: (typeof montarResumoCompleto === 'function') ? montarResumoCompleto() : '',
       total: total,
       litros: (typeof calcTotalLiters === 'function') ? calcTotalLiters() : '',
       num_barris: mcNumBarris,
