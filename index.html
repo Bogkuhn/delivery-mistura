@@ -1636,6 +1636,14 @@ function mcTrack(evento, dados) {
   } catch (e) { /* nunca interrompe a navegação */ }
 }
 
+// Le um cookie pelo nome (usado para capturar _fbp / _fbc da Meta).
+// Retorna '' se nao existir (ex.: usuario recusou o banner e o Pixel nao criou os cookies).
+function lerCookie(nome) {
+  var partes = ('; ' + document.cookie).split('; ' + nome + '=');
+  if (partes.length === 2) return decodeURIComponent(partes.pop().split(';').shift());
+  return '';
+}
+
 const order = {
   service: null,
   beers: {},
@@ -2844,6 +2852,14 @@ function sendWhatsapp() {
         });
       });
     }
+    // Captura o elo de identidade da Meta (_fbp / _fbc) para o Purchase server-side (CAPI) futuro.
+    // Se nao houver cookie _fbc mas a URL trouxe fbclid (clique de anuncio), monta o fbc no formato esperado.
+    var __fbp = lerCookie('_fbp');
+    var __fbc = lerCookie('_fbc');
+    if (!__fbc) {
+      var __fbclid = new URLSearchParams(location.search).get('fbclid');
+      if (__fbclid) __fbc = 'fb.1.' + Date.now() + '.' + __fbclid;
+    }
     mcTrack('pedido_enviado', {
       numero_pedido: order.numeroPedido || '',
       resumo: (typeof montarResumoCompleto === 'function') ? montarResumoCompleto() : '',
@@ -2863,7 +2879,9 @@ function sendWhatsapp() {
       frete: order.freteExtra || 0,
       nome: order.nome || '',
       telefone: order.telefone || '',
-      email: order.email || ''
+      email: order.email || '',
+      fbp: __fbp,
+      fbc: __fbc
     });
   } catch (e) { /* nunca interrompe o envio */ }
 
