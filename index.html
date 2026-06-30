@@ -6,7 +6,7 @@
     no fim do body). O GTM carrega em todas as visitas, porem em estado de
     consentimento NEGADO por padrao (sem cookies/dados pessoais ate o aceite);
     no aceite, o consentimento e atualizado para concedido. O Meta Pixel carrega
-    somente apos o aceite. IDs: GTM-KF2FLHXP | Meta Pixel 914120313472470
+    somente apos o aceite. IDs: GTM-KF2FLHXP | Meta Pixel 914120313472470 (agencia) + 2222323591897098 (proprio - sobreposicao/treino)
   -->
 
   <!-- Verificação de domínio Meta (apenas verificação, não rastreia) -->
@@ -2964,7 +2964,8 @@ function carregarGTM() {
   })(window,document,'script','dataLayer','GTM-KF2FLHXP');
 }
 
-// Carrega o Meta Pixel (914120313472470) e dispara o PageView - somente apos o aceite.
+// Carrega os Meta Pixels e dispara o PageView - somente apos o aceite.
+// Dois Pixels em paralelo: 914120313472470 (agencia, ja existente) + 2222323591897098 (proprio, em treino).
 function carregarMetaPixel() {
   if (__metaLoaded) return;
   __metaLoaded = true;
@@ -2976,8 +2977,9 @@ function carregarMetaPixel() {
   t.src=v;s=b.getElementsByTagName(e)[0];
   s.parentNode.insertBefore(t,s)}(window, document,'script',
   'https://connect.facebook.net/en_US/fbevents.js');
-  fbq('init', '914120313472470');
-  fbq('track', 'PageView');
+  fbq('init', '914120313472470'); // Pixel da agencia (mantido durante a sobreposicao)
+  fbq('init', '2222323591897098'); // Pixel proprio (Mistura Classica Delivery) - em treino
+  fbq('track', 'PageView');        // dispara para os DOIS Pixels inicializados
 }
 
 function esconderBannerCookies() {
