@@ -533,7 +533,8 @@ function carregarGTM(){
 }
 carregarGTM();
 
-/* 3) Meta Pixel carrega SOMENTE quando há consentimento. */
+/* 3) Meta Pixels carregam SOMENTE quando há consentimento.
+   Dois em paralelo: 914120313472470 (agencia, ja existente) + 2222323591897098 (proprio, em treino). */
 function carregarPixel(){
   if (window.__mc_pixel_loaded) return;
   window.__mc_pixel_loaded = true;
@@ -542,8 +543,9 @@ function carregarPixel(){
   n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
   t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
   (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
-  fbq('init','914120313472470');
-  fbq('track','PageView');
+  fbq('init','914120313472470'); // Pixel da agencia (mantido durante a sobreposicao)
+  fbq('init','2222323591897098'); // Pixel proprio (Mistura Classica Delivery) - em treino
+  fbq('track','PageView');        // dispara para os DOIS Pixels inicializados
 }
 
 /* 4) Concede o consentimento: atualiza o Consent Mode pra "granted" e sobe o Pixel. */
