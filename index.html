@@ -1623,6 +1623,14 @@ var MC_TRACK_CHAVE = 'mistura-2026'; // precisa ser IGUAL à CHAVE_SECRETA do Ap
 var MC_PAGINA      = 'site';
 var __mcIniciou    = false;
 
+// ------------------------------------------------------------
+// Se TRUE, a conversao (Lead no Pixel + dataLayer do GTM) tambem e
+// contada quando o cliente BAIXA o comprovante (PDF/Imagem), e nao so
+// quando aperta o botao verde do WhatsApp. O registro na PLANILHA
+// acontece SEMPRE, independentemente desta opcao. Mude para FALSE se
+// preferir contar o Lead apenas no botao verde.
+var MC_CONVERSAO_NO_DOWNLOAD = true;
+
 function mcTrack(evento, dados) {
   try {
     if (!MC_TRACK_URL || MC_TRACK_URL.indexOf('COLE_AQUI') === 0) return;
@@ -2694,6 +2702,7 @@ function _capturarComprovante() {
 }
 
 function baixarComprovanteImagem() {
+  registrarPedido('imagem'); // grava o pedido/lead mesmo sem clicar no botao verde
   if (typeof html2canvas !== 'function') {
     alert('Não foi possível gerar a imagem agora. Verifique sua conexão e tente novamente.');
     return;
@@ -2711,6 +2720,7 @@ function baixarComprovanteImagem() {
 }
 
 function baixarComprovantePDF() {
+  registrarPedido('pdf'); // grava o pedido/lead mesmo sem clicar no botao verde
   if (typeof html2canvas !== 'function' || !(window.jspdf && window.jspdf.jsPDF)) {
     alert('Não foi possível gerar o PDF agora. Verifique sua conexão e tente novamente.');
     return;
@@ -2822,21 +2832,98 @@ function montarResumoCompleto() {
   return L.join('\n');
 }
 
-function sendWhatsapp() {
-  const total = calcTotal();
-
-  // Garante que o número do pedido exista (caso sendWhatsapp seja chamado direto)
+// ============================================================
+//  REGISTRO DO PEDIDO (planilha + conversao)
+//  Chamado tanto pelo botao verde do WhatsApp quanto ao baixar o
+//  comprovante (PDF/Imagem). Assim, mesmo que o cliente so baixe o
+//  comprovante e NAO clique no botao verde, o lead e o pedido continuam
+//  chegando na planilha (e no e-mail interno).
+//
+//  Idempotente: grava na planilha UMA vez e dispara a conversao
+//  (Lead/GTM) UMA vez, nao importa quantos botoes o cliente aperte
+//  (PDF, Imagem e/ou WhatsApp) nem em que ordem.
+//
+//  origem: 'whatsapp' | 'pdf' | 'imagem'
+// ============================================================
+function registrarPedido(origem) {
+  // Garante que o numero do pedido exista (normalmente ja criado no Resumo)
   if (!order.numeroPedido) {
     order.numeroPedido = gerarNumeroPedido();
     var elNum = document.getElementById('resumo-numero');
     if (elNum) elNum.textContent = order.numeroPedido;
   }
 
+  var total = calcTotal();
+
+  // ===== 1) Medicao propria: grava o pedido na planilha (uma vez so) =====
+  if (!order.__registrado) {
+    order.__registrado = true;
+    try {
+      var mcItens = [];
+      var mcNumBarris = 0;
+      if (typeof BEER_CATALOG !== 'undefined' && order.beers) {
+        BEER_CATALOG.forEach(function(beer) {
+          beer.sizes.forEach(function(sz) {
+            var q = order.beers[beer.id + '_' + sz.l] || 0;
+            if (q > 0) { mcNumBarris += q; mcItens.push(q + 'x ' + beer.name + ' ' + sz.l + 'L'); }
+          });
+        });
+      }
+      // Captura o elo de identidade da Meta (_fbp / _fbc) para o Purchase server-side (CAPI) futuro.
+      // Se nao houver cookie _fbc mas a URL trouxe fbclid (clique de anuncio), monta o fbc no formato esperado.
+      var __fbp = lerCookie('_fbp');
+      var __fbc = lerCookie('_fbc');
+      if (!__fbc) {
+        var __fbclid = new URLSearchParams(location.search).get('fbclid');
+        if (__fbclid) __fbc = 'fb.1.' + Date.now() + '.' + __fbclid;
+      }
+      mcTrack('pedido_enviado', {
+        numero_pedido: order.numeroPedido || '',
+        origem: origem || '',
+        resumo: (typeof montarResumoCompleto === 'function') ? montarResumoCompleto() : '',
+        total: total,
+        litros: (typeof calcTotalLiters === 'function') ? calcTotalLiters() : '',
+        num_barris: mcNumBarris,
+        itens: mcItens.join('; '),
+        servico: order.service || '',
+        pagamento: order.pagamento || '',
+        entrega: order.delivery || '',
+        data_evento: order.eventDate || '',
+        horario: order.eventTime || '',
+        bairro: order.bairro || '',
+        cidade: order.cidadeEstado || '',
+        endereco: (order.logradouro || '') + ', ' + (order.numero || '') + (order.complemento ? ' - ' + order.complemento : ''),
+        cep: order.cep || '',
+        frete: order.freteExtra || 0,
+        nome: order.nome || '',
+        telefone: order.telefone || '',
+        email: order.email || '',
+        fbp: __fbp,
+        fbc: __fbc
+      });
+    } catch (e) { /* nunca interrompe a navegacao */ }
+  }
+
+  // ===== 2) Conversao (Lead no Pixel + dataLayer do GTM), uma vez so =====
+  // Sempre dispara no botao verde. No download do comprovante, so dispara
+  // se MC_CONVERSAO_NO_DOWNLOAD === true (configuravel no topo do script).
+  var deveConverter = (origem === 'whatsapp') || (MC_CONVERSAO_NO_DOWNLOAD === true);
+  if (deveConverter && !order.__converteu) {
+    order.__converteu = true;
+    dispararConversao();
+  }
+}
+
+function sendWhatsapp() {
+  // Gera o numero (se preciso), grava na planilha e dispara a conversao.
+  // Tudo idempotente: se o cliente ja tinha baixado o comprovante, nao duplica.
+  registrarPedido('whatsapp');
+
   // ============================================================
-  //  MENSAGEM NEUTRA (sem produto/preço)
+  //  MENSAGEM NEUTRA (sem produto/preco)
   //  Os detalhes completos do pedido ficam na planilha, no e-mail
-  //  de confirmação e no comprovante (PDF/imagem) que o cliente baixa.
-  //  A mensagem do WhatsApp leva apenas o número do pedido.
+  //  de confirmacao e no comprovante (PDF/imagem) que o cliente baixa.
+  //  A mensagem do WhatsApp leva apenas o numero do pedido.
   // ============================================================
   let msg = 'Olá! Acabei de finalizar meu pedido pelo site da Mistura Clássica.\n\n';
   msg += 'Nº do pedido: ' + order.numeroPedido + '\n';
@@ -2844,53 +2931,6 @@ function sendWhatsapp() {
   msg += '\nJá tenho os detalhes do pedido comigo. Pode me confirmar os próximos passos? Obrigado! 😊';
 
   const url = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(msg);
-
-  // ===== Medição própria: registra o pedido enviado na planilha =====
-  try {
-    var mcItens = [];
-    var mcNumBarris = 0;
-    if (typeof BEER_CATALOG !== 'undefined' && order.beers) {
-      BEER_CATALOG.forEach(function(beer) {
-        beer.sizes.forEach(function(sz) {
-          var q = order.beers[beer.id + '_' + sz.l] || 0;
-          if (q > 0) { mcNumBarris += q; mcItens.push(q + 'x ' + beer.name + ' ' + sz.l + 'L'); }
-        });
-      });
-    }
-    // Captura o elo de identidade da Meta (_fbp / _fbc) para o Purchase server-side (CAPI) futuro.
-    // Se nao houver cookie _fbc mas a URL trouxe fbclid (clique de anuncio), monta o fbc no formato esperado.
-    var __fbp = lerCookie('_fbp');
-    var __fbc = lerCookie('_fbc');
-    if (!__fbc) {
-      var __fbclid = new URLSearchParams(location.search).get('fbclid');
-      if (__fbclid) __fbc = 'fb.1.' + Date.now() + '.' + __fbclid;
-    }
-    mcTrack('pedido_enviado', {
-      numero_pedido: order.numeroPedido || '',
-      resumo: (typeof montarResumoCompleto === 'function') ? montarResumoCompleto() : '',
-      total: total,
-      litros: (typeof calcTotalLiters === 'function') ? calcTotalLiters() : '',
-      num_barris: mcNumBarris,
-      itens: mcItens.join('; '),
-      servico: order.service || '',
-      pagamento: order.pagamento || '',
-      entrega: order.delivery || '',
-      data_evento: order.eventDate || '',
-      horario: order.eventTime || '',
-      bairro: order.bairro || '',
-      cidade: order.cidadeEstado || '',
-      endereco: (order.logradouro || '') + ', ' + (order.numero || '') + (order.complemento ? ' - ' + order.complemento : ''),
-      cep: order.cep || '',
-      frete: order.freteExtra || 0,
-      nome: order.nome || '',
-      telefone: order.telefone || '',
-      email: order.email || '',
-      fbp: __fbp,
-      fbc: __fbc
-    });
-  } catch (e) { /* nunca interrompe o envio */ }
-
-  dispararConversao();
   window.open(url, '_blank');
 }
 
