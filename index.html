@@ -2761,7 +2761,7 @@ function baixarComprovantePDF() {
 
 // Monta o RESUMO COMPLETO do pedido (uso interno: planilha + e-mail).
 // Vai por Google Sheets e e-mail (fora do WhatsApp/Meta).
-// Não inclui CPF/CNPJ nem data de nascimento (linha LGPD).
+// Inclui CPF/CNPJ e data de nascimento (uso interno; nunca vai ao WhatsApp/Meta).
 function montarResumoCompleto() {
   var dateFormatted = order.eventDate ? order.eventDate.split('-').reverse().join('/') : '';
   var total = calcTotal();
@@ -2815,6 +2815,8 @@ function montarResumoCompleto() {
 
   L.push('DADOS DO CLIENTE:');
   L.push('  - ' + (order.tipoCadastro === 'cpf' ? 'Nome' : 'Razão Social') + ': ' + order.nome);
+  L.push('  - ' + (order.tipoCadastro === 'cpf' ? 'CPF' : 'CNPJ') + ': ' + order.documento);
+  if (order.tipoCadastro === 'cpf' && order.dataNascimento) L.push('  - Data de Nascimento: ' + order.dataNascimento.split('-').reverse().join('/'));
   L.push('  - Telefone/WhatsApp: ' + order.telefone);
   if (order.email) L.push('  - E-mail: ' + order.email);
   L.push('  - Endereço: ' + order.logradouro + ', ' + order.numero + (order.complemento ? ' – ' + order.complemento : ''));
