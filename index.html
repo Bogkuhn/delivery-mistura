@@ -1040,6 +1040,8 @@
             msg.style.display='block';
           }
           if(e30){var card=e30.closest('.beer-card'); if(card)card.scrollIntoView({behavior:'smooth',block:'center'});}
+          // Toast "Ir para o carrinho" ao aceitar a sugestao da calculadora
+          if((b30+b50)>0 && typeof showCartPopup==='function'){ window.mcCartPopupShown=true; showCartPopup(); }
         };
         window.mcCalcStep=function(d){
           var el=document.getElementById('mcCalcGuests');
