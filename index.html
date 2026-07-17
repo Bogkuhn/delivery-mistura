@@ -1867,10 +1867,19 @@ function refreshBeerPrices() {
 function changeBeer(bId, size, delta) {
   const key = bId + '_' + size;
   if (!order.beers) order.beers = {};
+  var mcTotalAntes = calcTotalBarrels();
   order.beers[key] = Math.max(0, (order.beers[key] || 0) + delta);
   const el = document.getElementById('q_' + bId + '_' + size);
   if (el) el.textContent = order.beers[key];
   updateBeerSubtotal();
+  // Pop-up "Ir para o carrinho" ao adicionar o primeiro barril
+  var mcTotalDepois = calcTotalBarrels();
+  if (mcTotalDepois === 0) {
+    window.mcCartPopupShown = false;
+  } else if (delta > 0 && mcTotalAntes === 0 && !window.mcCartPopupShown) {
+    window.mcCartPopupShown = true;
+    if (typeof showCartPopup === 'function') showCartPopup();
+  }
 }
 
 function changeExtraCups(delta) {
@@ -3117,6 +3126,67 @@ function initConsentimento() {
   var fy = document.getElementById('footer-year');
   if (fy) fy.textContent = new Date().getFullYear();
 })();
+</script>
+
+<!-- ========== AVISO "IR PARA O CARRINHO" (toast no canto, 1o barril) ========== -->
+<style>
+  .mc-cart-toast{position:fixed;z-index:99999;right:20px;bottom:20px;max-width:300px;width:calc(100% - 40px);background:var(--white);border:1px solid var(--border);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,0.18);padding:13px 34px 13px 13px;display:flex;gap:12px;align-items:center;transform:translateY(26px);opacity:0;pointer-events:none;transition:transform .3s cubic-bezier(.2,.9,.3,1.25),opacity .3s ease}
+  .mc-cart-toast.show{transform:none;opacity:1;pointer-events:auto}
+  .mc-cart-toast-icon{flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:#FDF9F0;border-radius:10px}
+  .mc-cart-toast-body{flex:1;min-width:0}
+  .mc-cart-toast-title{font-size:13px;font-weight:700;color:var(--dark);margin-bottom:7px;line-height:1.25}
+  .mc-cart-toast-btn{background:var(--gold);color:#fff;border:none;padding:8px 14px;border-radius:30px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .2s}
+  .mc-cart-toast-btn:hover{background:var(--gold-light);color:var(--dark)}
+  .mc-cart-toast-close{position:absolute;top:6px;right:8px;background:none;border:none;font-size:20px;line-height:1;color:var(--muted);cursor:pointer;padding:2px 5px}
+  .mc-cart-toast-close:hover{color:var(--dark)}
+  @media (max-width:480px){.mc-cart-toast{right:12px;left:12px;bottom:12px;width:auto;max-width:none}}
+</style>
+<div id="mc-cart-toast" class="mc-cart-toast" role="status" aria-live="polite">
+  <div class="mc-cart-toast-icon">
+    <svg viewBox="0 0 48 48" width="30" height="30" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <g fill="none" stroke="var(--gold)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 6 h4.5 l3.2 22.5 a2 2 0 0 0 2 1.7 h20.5 a2 2 0 0 0 2 -1.6 l3.3 -14.6 h-30.5"/>
+        <circle cx="17" cy="39" r="3.2"/>
+        <circle cx="34" cy="39" r="3.2"/>
+      </g>
+      <g>
+        <circle cx="39" cy="11" r="8" fill="var(--success)"/>
+        <path d="M35.5 11 l2.4 2.4 l4.1 -4.9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </svg>
+  </div>
+  <div class="mc-cart-toast-body">
+    <div class="mc-cart-toast-title">Adicionado ao carrinho</div>
+    <button class="mc-cart-toast-btn" type="button" onclick="mcGoToCart()">
+      Ir para o carrinho
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M5 12h14M13 6l6 6-6 6"></path>
+      </svg>
+    </button>
+  </div>
+  <button class="mc-cart-toast-close" type="button" aria-label="Fechar" onclick="hideCartPopup()">&times;</button>
+</div>
+<script>
+  window.mcCartPopupShown = window.mcCartPopupShown || false;
+  var mcCartToastTimer = null;
+  function showCartPopup(){
+    var t = document.getElementById('mc-cart-toast');
+    if (!t) return;
+    t.classList.add('show');
+    if (mcCartToastTimer) clearTimeout(mcCartToastTimer);
+    mcCartToastTimer = setTimeout(hideCartPopup, 7000); // some sozinho apos 7s
+  }
+  function hideCartPopup(){
+    var t = document.getElementById('mc-cart-toast');
+    if (t) t.classList.remove('show');
+    if (mcCartToastTimer){ clearTimeout(mcCartToastTimer); mcCartToastTimer = null; }
+  }
+  function mcGoToCart(){
+    hideCartPopup();
+    // Rola a janela do navegador toda para baixo (subtotal + botao Continuar)
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  }
+</script>
 </script>
 </body>
 </html>
