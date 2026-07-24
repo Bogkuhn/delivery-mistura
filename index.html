@@ -512,6 +512,64 @@
     .mc-cob.is-err  { border-color: #E9B8B2; background: #FDF4F3; }
     .mc-cob.is-err  .mc-cob-title { color: #A93226; }
 
+    /* ===== Modal do Termo de Responsabilidade ===== */
+    .mc-termo-overlay {
+      position: fixed; inset: 0; z-index: 100000;
+      background: rgba(26,18,8,0.72); backdrop-filter: blur(3px);
+      display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .mc-termo-overlay.show { display: flex; }
+    .mc-termo-card {
+      background: var(--white); border-radius: 16px; width: 100%; max-width: 760px;
+      max-height: 92vh; display: flex; flex-direction: column; overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+    }
+    .mc-termo-head { padding: 20px 26px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .mc-termo-head h3 { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--dark); line-height: 1.3; }
+    .mc-termo-head p { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.45; }
+    .mc-termo-corpo {
+      padding: 18px 26px 22px; overflow-y: auto; flex: 1;
+      font-size: 13.5px; line-height: 1.6; color: var(--text);
+      -webkit-overflow-scrolling: touch;
+    }
+    .mc-termo-corpo h3 {
+      font-family: 'Playfair Display', serif; font-size: 15px; color: var(--dark);
+      margin: 20px 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border);
+    }
+    .mc-termo-corpo h3:first-child { margin-top: 0; }
+    .mc-termo-corpo p { margin-bottom: 9px; text-align: justify; }
+    .mc-termo-corpo .termo-lista { margin: 0 0 11px 20px; }
+    .mc-termo-corpo .termo-lista li { margin-bottom: 4px; }
+    .mc-termo-corpo strong { color: var(--dark); }
+    .mc-termo-fim { margin-top: 18px; padding-top: 14px; border-top: 2px solid var(--gold); font-size: 12.5px; color: var(--muted); }
+    .mc-termo-foot { padding: 16px 26px 20px; border-top: 1px solid var(--border); background: #FDFAF4; flex-shrink: 0; }
+    .mc-termo-hint {
+      font-size: 12.5px; color: #9A6B12; background: #FDF9F0; border: 1px solid var(--gold);
+      border-radius: 8px; padding: 8px 11px; margin-bottom: 13px; line-height: 1.4;
+    }
+    .mc-termo-hint.oculto { display: none; }
+    .mc-termo-check { display: flex; gap: 11px; align-items: flex-start; cursor: pointer; margin-bottom: 15px; }
+    .mc-termo-check input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; accent-color: var(--gold); cursor: pointer; }
+    .mc-termo-check input[type="checkbox"]:disabled { cursor: not-allowed; opacity: .45; }
+    .mc-termo-check span { font-size: 13.5px; line-height: 1.45; color: var(--text); }
+    .mc-termo-acoes { display: flex; gap: 12px; }
+    .mc-termo-acoes button { flex: 1; }
+    .mc-termo-acoes button:disabled { opacity: .45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+    .mc-termo-link { color: var(--gold); font-weight: 600; text-decoration: underline; }
+    .mc-aceite-aviso {
+      border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 15px;
+      margin: 0 0 16px; font-size: 13px; line-height: 1.5; color: var(--muted); background: var(--white);
+    }
+    .mc-aceite-aviso.is-ok { border-color: #BFE6CC; background: #F3FBF6; color: #1E8449; }
+    @media (max-width: 600px) {
+      .mc-termo-overlay { padding: 0; }
+      .mc-termo-card { max-height: 100vh; border-radius: 0; }
+      .mc-termo-head { padding: 16px 18px 13px; }
+      .mc-termo-corpo { padding: 15px 18px 20px; font-size: 13px; }
+      .mc-termo-foot { padding: 14px 18px 18px; }
+      .mc-termo-acoes { flex-direction: column; }
+    }
+
     /* ===== Checkbox "já tenho os equipamentos" (etapa Barris) ===== */
     .mc-onlybarrels {
       border: 1.5px solid var(--border); border-radius: 12px;
@@ -1564,6 +1622,11 @@
       <div id="resumo-frete"></div>
     </div>
 
+    <div class="summary-section" id="resumo-termo-section" style="display:none;">
+      <div class="summary-section-title">Termo de Responsabilidade</div>
+      <div id="resumo-termo"></div>
+    </div>
+
     <div class="total-final">
       <span class="label">Total Estimado do Pedido</span>
       <span class="value" id="resumo-total">R$ 0,00</span>
@@ -1575,6 +1638,13 @@
       </div>
     </div>
     </div><!-- /#comprovante -->
+
+    <div class="mc-aceite-aviso" id="aceite-aviso">
+      📄 Para finalizar, será necessário ler e aceitar o
+      <a href="termo-de-responsabilidade.html" target="_blank" rel="noopener" class="mc-termo-link">Termo de Responsabilidade</a>,
+      que reúne as condições de fornecimento e a responsabilidade pela guarda dos equipamentos.
+      O termo abrirá ao clicar em qualquer um dos botões abaixo.
+    </div>
 
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:18px 0 4px;">
       <button class="btn-secondary" onclick="baixarComprovantePDF()" style="flex:1;min-width:160px;">⬇️ Baixar PDF</button>
@@ -1604,11 +1674,143 @@
 <footer class="site-footer">
   © <span id="footer-year"></span> Cervejaria Mistura Clássica ·
   <a href="politica-de-privacidade.html" target="_blank" rel="noopener">Política de Privacidade</a> ·
+  <a href="termo-de-responsabilidade.html" target="_blank" rel="noopener">Termo de Responsabilidade</a> ·
   <a href="#" onclick="abrirPreferenciasCookies(); return false;">Preferências de cookies</a>
   <div class="footer-legal">
     <strong>Beer Flow Distribuidora LTDA</strong> · CNPJ 28.932.601/0001-51
   </div>
 </footer>
+
+<!-- ========== MODAL: TERMO DE RESPONSABILIDADE ==========
+     ATENÇÃO: ao alterar o texto abaixo, altere TAMBÉM o arquivo
+     termo-de-responsabilidade.html e incremente MC_TERMO_VERSAO no script.
+     ====================================================== -->
+<div class="mc-termo-overlay" id="termoOverlay" role="dialog" aria-modal="true" aria-labelledby="termoTitulo">
+  <div class="mc-termo-card">
+
+    <div class="mc-termo-head">
+      <h3 id="termoTitulo">Termo de Responsabilidade, Comodato de Equipamentos e Condições de Fornecimento de Chope</h3>
+      <p>Leia o termo até o final para liberar o aceite. Ele também está disponível em
+        <a href="termo-de-responsabilidade.html" target="_blank" rel="noopener" class="mc-termo-link">página separada</a>
+        e no comprovante do seu pedido.</p>
+    </div>
+
+    <div class="mc-termo-corpo" id="termoCorpo">
+      <p><strong>Versão 1.0 — vigente a partir de 24/07/2026.</strong> Esta é a versão do Termo aceita no momento do pedido e aplicável a ele, ainda que versões posteriores venham a ser publicadas.</p>
+      <h3>PARTES</h3>
+      <p><strong>CONTRATADA:</strong> BEER FLOW DISTRIBUIDORA LTDA, pessoa jurídica de direito privado inscrita no CNPJ sob o nº 28.932.601/0001-51, com sede na Rua Maxwell 418A, Vila Isabel, na cidade do Rio de Janeiro, Estado do Rio de Janeiro, que atua no mercado sob o nome comercial e marca <strong>MISTURA CLÁSSICA</strong>.</p>
+      <p><strong>CONTRATANTE:</strong> a pessoa física ou jurídica identificada no pedido, cujos dados (nome completo ou razão social, CPF ou CNPJ, data de nascimento, telefone, e-mail e endereço do evento) foram por ela informados no site deliverymistura.com.br e que integram este Termo para todos os efeitos legais.</p>
+      <p>O pedido — com seus itens, quantidades, valores, data, horário e endereço do evento — é parte integrante e inseparável deste Termo, ao qual se vincula pelo respectivo número de pedido.</p>
+      <p>Ao marcar a opção de aceite no site, o CONTRATANTE declara ter lido, compreendido e aceito integralmente as condições abaixo, manifestação que se dá por meio de assinatura eletrônica e produz todos os efeitos jurídicos entre as partes, nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001 e da Lei nº 14.063/2020.</p>
+      <h3>CLÁUSULA 1 — OBJETO</h3>
+      <p>1.1. A CONTRATADA obriga-se a fornecer o chope em perfeitas condições de consumo e, quando a modalidade contratada os incluir, a entregar em <strong>comodato</strong> (empréstimo gratuito de uso, nos termos dos arts. 579 a 585 do Código Civil) os equipamentos necessários à extração e ao serviço da bebida.</p>
+      <p>1.2. Caso o CONTRATANTE opte pela modalidade <strong>“Somente Barris”</strong>, declarando já possuir os equipamentos de extração, o objeto limita-se ao fornecimento do chope e ao comodato dos barris (vasilhames), permanecendo integralmente aplicáveis a este Termo as cláusulas relativas à guarda, à conservação e à devolução dos vasilhames.</p>
+      <p>1.3. O comodato é gratuito e acessório ao fornecimento do chope, não configurando locação autônoma, salvo na hipótese de mora na devolução prevista na Cláusula 8.</p>
+      <h3>CLÁUSULA 2 — MAIORIDADE E CONSUMO RESPONSÁVEL</h3>
+      <p>2.1. O CONTRATANTE declara, sob as penas da lei, ser maior de 18 (dezoito) anos e plenamente capaz para os atos da vida civil.</p>
+      <p>2.2. O CONTRATANTE declara conhecer que é crime vender, fornecer, servir, ministrar ou entregar bebida alcoólica a pessoa menor de 18 anos, nos termos do art. 243 do Estatuto da Criança e do Adolescente, com a redação dada pela Lei nº 13.106/2015, e assume a responsabilidade exclusiva por impedir o acesso de menores de idade ao chope durante o evento.</p>
+      <p>2.3. A CONTRATADA reserva-se o direito de não realizar a entrega caso a pessoa que a receber não comprove ser maior de 18 anos, ou caso constate que a bebida será servida a menores de idade, sem que tal recusa configure descumprimento contratual por parte da CONTRATADA.</p>
+      <p>2.4. O CONTRATANTE compromete-se a não permitir o consumo por pessoas que venham a conduzir veículo automotor e a zelar pelo consumo responsável no local do evento.</p>
+      <h3>CLÁUSULA 3 — RESERVA, PREÇO E PAGAMENTO</h3>
+      <p>3.1. A reserva do chope e dos equipamentos para a data do evento efetiva-se <strong>somente com o pagamento</strong> do pedido, em forma de sinal ou integralmente. Até que o pagamento seja confirmado, o pedido permanece sujeito à disponibilidade de estoque e de equipamentos para a data pretendida.</p>
+      <p>3.2. O pagamento integral deverá ser realizado até 1 (um) dia útil anterior à data do evento, dentro do horário comercial. O não pagamento poderá acarretar a não entrega do chope e dos equipamentos.</p>
+      <p>3.3. Eventuais valores adicionais — frete de entrega por bairro, frete dedicado, diárias extras e fardos extras de copos — são os discriminados no pedido, previamente conhecidos e aceitos pelo CONTRATANTE.</p>
+      <h3>CLÁUSULA 4 — ENTREGA E INSTALAÇÃO</h3>
+      <p>4.1. Caberá à CONTRATADA realizar a entrega do chope e, quando aplicável, a instalação dos equipamentos, até 30 (trinta) minutos antes do horário de início do evento informado no pedido.</p>
+      <p>4.2. É obrigação do CONTRATANTE disponibilizar uma janela de horário de, no mínimo, 3 (três) horas para a entrega e a instalação. Exemplo: se o evento começa ao meio-dia, a janela de entrega deverá ser de, no mínimo, 8h30 às 11h30.</p>
+      <p>4.3. Caso o evento inicie em horário incompatível com a janela mínima da cláusula 4.2, o CONTRATANTE deverá, alternativamente: (i) viabilizar a entrega e a instalação na véspera do evento, em horário comercial; ou (ii) contratar frete dedicado, no valor de R$ 200,00 (duzentos reais), para disponibilização de veículo exclusivo.</p>
+      <p>4.4. A CONTRATADA informará ao CONTRATANTE, na véspera do evento, a janela estimada de horário da entrega.</p>
+      <p>4.5. É obrigação do CONTRATANTE estar presente no local do evento no momento da entrega para indicar a posição desejada de instalação da chopeira, ou orientar previamente, via WhatsApp, o local de instalação, com fotos e/ou vídeos da bancada ou mesa.</p>
+      <p>4.6. Não havendo pessoa no local capaz de orientar a instalação, a CONTRATADA aguardará por no máximo 15 (quinze) minutos. Esgotado esse prazo, ou sendo impossível o acesso ao local por qualquer motivo, a CONTRATADA reserva-se o direito de seguir a rota, a fim de não atrasar as instalações dos eventos subsequentes. Nessa hipótese, nova tentativa de entrega ficará condicionada à disponibilidade operacional e à contratação de frete dedicado, não se caracterizando descumprimento contratual por parte da CONTRATADA.</p>
+      <p>4.7. Concluída a instalação, a CONTRATADA testará os equipamentos no local, de modo a atestar seu bom funcionamento.</p>
+      <p>4.8. Após a instalação e o teste, os equipamentos <strong>não poderão ser removidos ou deslocados</strong> de posição pelo CONTRATANTE sem autorização prévia e por escrito da CONTRATADA.</p>
+      <p>4.9. Em se tratando de chopeira elétrica, é obrigação do CONTRATANTE fornecer ponto de energia elétrica <strong>exclusivo</strong> para o equipamento, na tensão informada no pedido. É vedada a ligação do equipamento em extensões ou filtros de linha. Caso o CONTRATANTE o faça, assumirá integralmente os riscos, respondendo pelos danos causados ao equipamento e pela ausência de refrigeração adequada.</p>
+      <h3>CLÁUSULA 5 — PRAZO DO COMODATO E RECOLHA</h3>
+      <p>5.1. O comodato vigora da entrega dos bens até a sua efetiva devolução à CONTRATADA.</p>
+      <p>5.2. Nas modalidades que incluem chopeira, o contrato é celebrado para 1 (um) dia de evento (salvo quando o CONTRATANTE tiver adicionado diárias extras no pedido), cabendo à CONTRATADA o direito de recolher os equipamentos no dia seguinte ao evento, no horário das 8h às 17h. Caso o CONTRATANTE deseje determinar o horário da recolha ou incluir restrição de horário, deverá contratar carro exclusivo para a recolha, no valor de R$ 200,00 (duzentos reais).</p>
+      <p>5.3. Na modalidade “Somente Barris”, a recolha dos vasilhames ocorrerá em até 7 (sete) dias corridos contados do evento, em data e horário a serem combinados entre as partes via WhatsApp. É obrigação do CONTRATANTE oferecer flexibilidade de horário comercial para a recolha dos vasilhames. Havendo restrições de horário, o CONTRATANTE deverá contratar carro exclusivo para a recolha, no valor de R$ 200,00 (duzentos reais).</p>
+      <p>5.4. O CONTRATANTE poderá contratar diárias extras, cujos valores são os discriminados no pedido. Caso a CONTRATADA seja impossibilitada de realizar a recolha na data devida por causa atribuível ao CONTRATANTE, será cobrada diária adicional no valor de R$ 150,00 (cento e cinquenta reais).</p>
+      <p>5.5. A CONTRATADA informará ao CONTRATANTE, na véspera da recolha, a janela estimada de horário.</p>
+      <h3>CLÁUSULA 6 — SUPORTE TÉCNICO DURANTE O EVENTO</h3>
+      <p>6.1. A CONTRATADA prestará suporte via WhatsApp ao longo de todo o dia do evento, das 08h às 21h, orientando o CONTRATANTE quanto ao uso dos equipamentos.</p>
+      <p>6.2. O CONTRATANTE compromete-se a colaborar com as solicitações da CONTRATADA para diagnóstico e solução de eventual problema, enviando fotos e vídeos, respondendo às perguntas formuladas e executando procedimentos simples nos equipamentos.</p>
+      <p>6.3. Entre 07h30 e 15h30 haverá técnico de plantão na sede da CONTRATADA, apto a despachar equipamentos de reposição ou realizar visita técnica, caso identificada a necessidade. A visita será isenta de custo quando atestado defeito técnico nos equipamentos fornecidos.</p>
+      <p>6.4. Caso seja atestado defeito nos equipamentos fornecidos e não seja possível, no horário do evento, realizar o reparo ou a substituição, a CONTRATADA restituirá ao CONTRATANTE o valor proporcional do chope que não pôde ser consumido, no prazo de até 2 (dois) dias úteis, pelo mesmo meio de pagamento utilizado.</p>
+      <p>6.5. Não caracterizam defeito dos equipamentos, e não geram direito a restituição, as ocorrências decorrentes de: ausência ou insuficiência de gelo por conta do CONTRATANTE; falta, oscilação ou inadequação da energia elétrica no local; uso de extensão elétrica em desacordo com a cláusula 4.9; deslocamento dos equipamentos sem autorização; e manuseio indevido por terceiros.</p>
+      <h3>CLÁUSULA 7 — GUARDA, CONSERVAÇÃO E RESPONSABILIDADE PELOS BENS</h3>
+      <p>7.1. Os bens entregues em comodato destinam-se única e exclusivamente ao uso dos produtos fornecidos pela CONTRATADA, sendo vedada sua utilização com bebidas de terceiros.</p>
+      <p>7.2. O CONTRATANTE obriga-se a devolvê-los em perfeitas condições, no mesmo estado em que os recebeu, ressalvado o desgaste natural decorrente do uso regular.</p>
+      <p>7.3. A partir da entrega e instalação, o CONTRATANTE assume a posse direta e a responsabilidade pela guarda dos bens, respondendo por qualquer vício que venha a surgir, salvo se comprovadamente oriundo de fabricação ou de desgaste por uso regular.</p>
+      <p>7.4. O CONTRATANTE responsabiliza-se por eventuais subtrações (furto, roubo ou extravio) e por danos que resultem na inutilização dos bens em comodato, obrigando-se ao pagamento dos respectivos valores de reposição, a saber:</p>
+      <ul class="termo-lista">
+        <li>Chopeira elétrica — R$ 6.000,00</li>
+        <li>Chopeira a gelo — R$ 3.000,00</li>
+        <li>Cilindro de CO₂ — R$ 880,00</li>
+        <li>Regulador de CO₂ — R$ 350,00</li>
+        <li>Extratora — R$ 200,00</li>
+        <li>Jogo de mangueiras e engates — R$ 30,00</li>
+        <li>Barril / vasilhame — R$ 600,00</li>
+      </ul>
+      <p>7.5. Os valores da cláusula 7.4 correspondem ao custo de reposição dos bens e poderão ser atualizados pela CONTRATADA, aplicando-se ao pedido os valores constantes da versão deste Termo aceita pelo CONTRATANTE.</p>
+      <p>7.6. Ocorrendo furto ou roubo, o CONTRATANTE deverá comunicar a CONTRATADA imediatamente e registrar boletim de ocorrência, encaminhando-lhe cópia no prazo de 5 (cinco) dias.</p>
+      <h3>CLÁUSULA 8 — MORA NA DEVOLUÇÃO</h3>
+      <p>8.1. Não devolvidos os bens ao término do prazo do comodato, o CONTRATANTE constituir-se-á em mora de pleno direito, independentemente de qualquer interpelação judicial ou extrajudicial.</p>
+      <p>8.2. Durante a mora, e nos termos do art. 582 do Código Civil, o CONTRATANTE pagará à <strong>CONTRATADA</strong> aluguel pelo uso dos bens não devolvidos, previamente arbitrado em 1% (um por cento) por dia sobre o respectivo valor de reposição indicado na cláusula 7.4.</p>
+      <p>8.3. Além do aluguel previsto na cláusula 8.2, incidirá cláusula penal moratória, não compensatória, no valor equivalente a 10% (dez por cento) do valor de reposição dos bens não devolvidos, devida <strong>uma única vez</strong>.</p>
+      <p>8.4. Decorridos 30 (trinta) dias corridos da data devida para a devolução sem que os bens sejam restituídos, a CONTRATADA poderá, a seu critério, considerar os bens definitivamente perdidos e converter a obrigação de devolução em obrigação de pagar o valor de reposição previsto na cláusula 7.4, acrescido dos encargos já vencidos.</p>
+      <p>8.5. A mora na devolução ensejará à CONTRATADA o direito de utilizar as medidas judiciais cabíveis, respondendo o CONTRATANTE pelas custas processuais e pelos honorários advocatícios fixados judicialmente.</p>
+      <h3>CLÁUSULA 9 — ARREPENDIMENTO, CANCELAMENTO E REMARCAÇÃO</h3>
+      <p>9.1. <strong>Direito de arrependimento.</strong> Por se tratar de contratação realizada fora do estabelecimento comercial, o CONTRATANTE poderá desistir do pedido no prazo de 7 (sete) dias corridos, contados da data do aceite deste Termo, nos termos do art. 49 do Código de Defesa do Consumidor, com restituição integral dos valores eventualmente pagos, inclusive frete, desde que a desistência seja manifestada ao menos 1 (um) dia antes da <strong>data de expedição</strong> do chope e dos equipamentos (a expedição ocorre no dia útil anterior à data do evento).</p>
+      <p>9.2. Manifestado o arrependimento no dia da expedição ou após, a restituição observará o disposto na cláusula 9.3.</p>
+      <p>9.3. <strong>Cancelamento fora do prazo de arrependimento.</strong> Não sendo exercido o direito da cláusula 9.1, o cancelamento observará os seguintes critérios:</p>
+      <ul class="termo-lista">
+        <li>anterior à data de expedição: restituição integral ou remarcação para outra data sem custo adicional;</li>
+        <li>no dia da expedição, antes das 15h: restituição integral ou remarcação para outra data sem custo adicional;</li>
+        <li>no dia da expedição, após as 15h: restituição com retenção de 10% (dez por cento), a título de custos operacionais já incorridos, ou remarcação para outra data sem custo adicional;</li>
+        <li>no dia do evento, até as 8h: restituição com retenção de 20% (vinte por cento), desde que o material ainda não tenha sido carregado nem saído para a rota de entrega;</li>
+        <li>no dia do evento, após as 8h: restituição com retenção de 50% (cinquenta por cento), por já ter o material saído para a rota de entrega.</li>
+      </ul>
+      <p>9.4. A remarcação depende de disponibilidade de estoque e de equipamentos para a nova data pretendida.</p>
+      <p>9.5. Caso a CONTRATADA seja impossibilitada de cumprir o pedido por caso fortuito ou força maior, restituirá integralmente os valores pagos, sem incidência de outras indenizações.</p>
+      <h3>CLÁUSULA 10 — PROTEÇÃO DE DADOS PESSOAIS (LGPD)</h3>
+      <p>10.1. Os dados pessoais informados pelo CONTRATANTE são tratados pela CONTRATADA para a execução deste contrato (art. 7º, V, da Lei nº 13.709/2018), para o cumprimento de obrigações legais e regulatórias (art. 7º, II) e para o exercício regular de direitos (art. 7º, VI).</p>
+      <p>10.2. A data de nascimento é coletada com a finalidade específica de verificação da maioridade do CONTRATANTE, em cumprimento à vedação legal de fornecimento de bebida alcoólica a menores de 18 anos.</p>
+      <p>10.3. O tratamento de dados observa integralmente a Política de Privacidade da CONTRATADA, disponível em deliverymistura.com.br/politica-de-privacidade.html, que complementa este Termo.</p>
+      <p>10.4. O CONTRATANTE pode exercer os direitos previstos no art. 18 da LGPD pelo canal contato@beerflowdistribuidora.com.</p>
+      <h3>CLÁUSULA 11 — ACEITE ELETRÔNICO E REGISTRO DA MANIFESTAÇÃO</h3>
+      <p>11.1. O aceite deste Termo se dá mediante marcação da opção correspondente no site, sendo registrados pela CONTRATADA a data e a hora do aceite, o número do pedido, a versão do Termo aceita e informações técnicas do dispositivo utilizado.</p>
+      <p>11.2. O CONTRATANTE reconhece a validade e a força probatória desse registro eletrônico como comprovação de sua manifestação de vontade, nos termos do art. 10, § 2º, da MP nº 2.200-2/2001, da Lei nº 14.063/2020 e do art. 411, II, do Código de Processo Civil.</p>
+      <p>11.3. Uma via deste Termo, com o registro do aceite, é disponibilizada ao CONTRATANTE para download no próprio site e encaminhada ao e-mail informado no pedido, quando fornecido.</p>
+      <h3>CLÁUSULA 12 — DISPOSIÇÕES FINAIS</h3>
+      <p>12.1. A eventual nulidade ou invalidade de qualquer cláusula deste Termo não prejudicará a validade e a eficácia das demais.</p>
+      <p>12.2. A tolerância de qualquer das partes quanto ao descumprimento de obrigação pela outra não implica novação, renúncia ou alteração das condições aqui pactuadas.</p>
+      <p>12.3. As partes declaram que somente após a leitura integral deste Termo aceitaram os termos, condições e cláusulas nele contidos, tendo tido tempo suficiente para obter as informações e os esclarecimentos que julgaram necessários.</p>
+      <p>12.4. Fica eleito o foro da Comarca do Rio de Janeiro, Estado do Rio de Janeiro, para dirimir as controvérsias decorrentes deste Termo, <strong>ressalvado</strong>, nas relações de consumo, o direito do CONTRATANTE de ajuizar demanda no foro de seu domicílio, na forma do art. 101, I, do Código de Defesa do Consumidor.</p>
+      <div class="mc-termo-fim" id="termoFim">
+        Fim do termo. Marque a opção abaixo para registrar o seu aceite.
+      </div>
+    </div>
+
+    <div class="mc-termo-foot">
+      <div class="mc-termo-hint" id="termoHint">
+        ⬆️ Role o texto acima até o final para habilitar o aceite.
+      </div>
+      <label class="mc-termo-check" for="termoCheck">
+        <input type="checkbox" id="termoCheck" disabled onchange="mcTermoCheckChange(this)">
+        <span>Declaro ser maior de 18 anos, que li e compreendi integralmente o Termo de
+          Responsabilidade acima e que aceito todas as suas condições, assumindo a
+          responsabilidade pela guarda e devolução dos equipamentos recebidos em comodato.</span>
+      </label>
+      <div class="mc-termo-acoes">
+        <button type="button" class="btn-secondary" onclick="mcFecharTermo()">Cancelar</button>
+        <button type="button" class="btn-primary" id="termoBtnAceitar" disabled onclick="mcAceitarTermo()">
+          Aceitar e continuar
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- ========== BANNER DE CONSENTIMENTO DE COOKIES (LGPD) ========== -->
 <div class="cookie-banner" id="cookieBanner" role="dialog" aria-live="polite" aria-label="Aviso de cookies">
@@ -1716,6 +1918,12 @@ const order = {
   telOutra: '',
   observacoes: '',
   pagamento: 'pix',
+  // Registro do aceite do Termo de Responsabilidade
+  termoAceito: false,
+  termoVersao: '',
+  termoDataHora: '',
+  termoTimestampISO: '',
+  termoDispositivo: '',
 };
 
 
@@ -2566,6 +2774,24 @@ function goToStep6() {
   if (doc.length < docMinLen) { document.getElementById('err-doc').style.display = 'block'; valid = false; }
   else document.getElementById('err-doc').style.display = 'none';
 
+  // Data de nascimento: obrigatória para CPF, com verificação de maioridade
+  var nascEl2  = document.getElementById('dataNascimento');
+  var errNasc2 = document.getElementById('err-nasc');
+  if (order.tipoCadastro === 'cpf') {
+    var nascVal = nascEl2 ? nascEl2.value : '';
+    if (!nascVal) {
+      errNasc2.textContent = 'Data de nascimento é obrigatória.';
+      errNasc2.style.display = 'block'; valid = false;
+    } else if (nascEl2.max && nascVal > nascEl2.max) {
+      errNasc2.textContent = 'É necessário ter 18 anos ou mais para finalizar o pedido.';
+      errNasc2.style.display = 'block'; valid = false;
+    } else {
+      errNasc2.style.display = 'none';
+    }
+  } else if (errNasc2) {
+    errNasc2.style.display = 'none';
+  }
+
   const tel = document.getElementById('telefone').value.replace(/\D/g,'');
   if (tel.length < 10) { document.getElementById('err-tel').style.display = 'block'; valid = false; }
   else document.getElementById('err-tel').style.display = 'none';
@@ -2644,6 +2870,7 @@ function buildResumo() {
   if (!order.numeroPedido) order.numeroPedido = gerarNumeroPedido();
   var elNum = document.getElementById('resumo-numero');
   if (elNum) elNum.textContent = order.numeroPedido;
+  mcAtualizarSeloTermo();
 
   // Serviço
   let svcHtml = '';
@@ -2822,6 +3049,7 @@ function _capturarComprovante() {
 }
 
 function baixarComprovanteImagem() {
+  if (!mcTermoRequerido('imagem')) return;   // exige aceite do Termo
   registrarPedido('imagem'); // grava o pedido/lead mesmo sem clicar no botao verde
   if (typeof html2canvas !== 'function') {
     alert('Não foi possível gerar a imagem agora. Verifique sua conexão e tente novamente.');
@@ -2840,6 +3068,7 @@ function baixarComprovanteImagem() {
 }
 
 function baixarComprovantePDF() {
+  if (!mcTermoRequerido('pdf')) return;      // exige aceite do Termo
   registrarPedido('pdf'); // grava o pedido/lead mesmo sem clicar no botao verde
   if (typeof html2canvas !== 'function' || !(window.jspdf && window.jspdf.jsPDF)) {
     alert('Não foi possível gerar o PDF agora. Verifique sua conexão e tente novamente.');
@@ -2951,6 +3180,19 @@ function montarResumoCompleto() {
   if (order.freteExtra > 0) L.push('FRETE: ' + fmt(order.freteExtra) + ' (bairro: ' + order.bairro + ')');
   L.push('PAGAMENTO: ' + (order.pagamento === 'pix' ? 'PIX' : 'Cartão (link de pagamento)'));
   L.push('TOTAL ESTIMADO: ' + fmt(total));
+
+  // Registro do aceite do Termo de Responsabilidade (prova do consentimento)
+  L.push('');
+  L.push('TERMO DE RESPONSABILIDADE:');
+  if (order.termoAceito) {
+    L.push('  - Situação: ACEITO eletronicamente');
+    L.push('  - Versão: ' + order.termoVersao);
+    L.push('  - Data/hora local: ' + order.termoDataHora);
+    L.push('  - Timestamp UTC: ' + order.termoTimestampISO);
+    L.push('  - Dispositivo: ' + order.termoDispositivo);
+  } else {
+    L.push('  - Situação: NÃO ACEITO');
+  }
   return L.join('\n');
 }
 
@@ -3024,7 +3266,13 @@ function registrarPedido(origem) {
         tipo_cadastro: order.tipoCadastro || '',
         data_nascimento: order.dataNascimento || '',
         fbp: __fbp,
-        fbc: __fbc
+        fbc: __fbc,
+        // Aceite do Termo de Responsabilidade
+        termo_aceito: order.termoAceito ? 'SIM' : 'NAO',
+        termo_versao: order.termoVersao || '',
+        termo_datahora: order.termoDataHora || '',
+        termo_timestamp_utc: order.termoTimestampISO || '',
+        termo_dispositivo: order.termoDispositivo || ''
       });
     } catch (e) { /* nunca interrompe a navegacao */ }
   }
@@ -3040,6 +3288,7 @@ function registrarPedido(origem) {
 }
 
 function sendWhatsapp() {
+  if (!mcTermoRequerido('whatsapp')) return;  // exige aceite do Termo
   // Gera o numero (se preciso), grava na planilha e dispara a conversao.
   // Tudo idempotente: se o cliente ja tinha baixado o comprovante, nao duplica.
   registrarPedido('whatsapp');
@@ -3057,6 +3306,119 @@ function sendWhatsapp() {
 
   const url = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(msg);
   window.open(url, '_blank');
+}
+
+// ============================================================
+//  TERMO DE RESPONSABILIDADE — aceite obrigatório antes de
+//  confirmar no WhatsApp, baixar o PDF ou baixar a imagem.
+//  Ao atualizar o texto do termo, incremente a versão abaixo.
+// ============================================================
+var MC_TERMO_VERSAO = '1.0';
+var mcTermoAcaoPendente = null;
+
+// Retorna true se o termo já foi aceito; caso contrário abre o modal e retorna false.
+function mcTermoRequerido(acao) {
+  if (order.termoAceito) return true;
+  mcAbrirTermo(acao);
+  return false;
+}
+
+function mcAbrirTermo(acao) {
+  mcTermoAcaoPendente = acao || null;
+  var ov = document.getElementById('termoOverlay');
+  if (!ov) return;
+  var chk  = document.getElementById('termoCheck');
+  var btn  = document.getElementById('termoBtnAceitar');
+  var hint = document.getElementById('termoHint');
+  var corpo = document.getElementById('termoCorpo');
+  if (chk) { chk.checked = false; chk.disabled = true; }
+  if (btn) btn.disabled = true;
+  if (hint) hint.classList.remove('oculto');
+  ov.classList.add('show');
+  document.body.style.overflow = 'hidden';
+  if (corpo) {
+    corpo.scrollTop = 0;
+    // Se o texto couber inteiro na tela, libera o aceite de imediato
+    setTimeout(function () { mcTermoScroll(); }, 60);
+  }
+  mcTrack('termo_aberto', { numero_pedido: order.numeroPedido || '', versao: MC_TERMO_VERSAO });
+}
+
+function mcFecharTermo() {
+  var ov = document.getElementById('termoOverlay');
+  if (ov) ov.classList.remove('show');
+  document.body.style.overflow = '';
+  mcTermoAcaoPendente = null;
+}
+
+// Libera o checkbox somente depois que o cliente rolou o termo até o fim
+function mcTermoScroll() {
+  var corpo = document.getElementById('termoCorpo');
+  var chk   = document.getElementById('termoCheck');
+  var hint  = document.getElementById('termoHint');
+  if (!corpo || !chk) return;
+  var fim = (corpo.scrollTop + corpo.clientHeight) >= (corpo.scrollHeight - 28);
+  if (fim && chk.disabled) {
+    chk.disabled = false;
+    if (hint) hint.classList.add('oculto');
+  }
+}
+
+function mcTermoCheckChange(cb) {
+  var btn = document.getElementById('termoBtnAceitar');
+  if (btn) btn.disabled = !cb.checked;
+}
+
+function mcAceitarTermo() {
+  var chk = document.getElementById('termoCheck');
+  if (!chk || !chk.checked) return;
+
+  var d = new Date();
+  var p = function (n) { return String(n).padStart(2, '0'); };
+  order.termoAceito       = true;
+  order.termoVersao       = MC_TERMO_VERSAO;
+  order.termoDataHora     = p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() +
+                            ' às ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  order.termoTimestampISO = d.toISOString();
+  order.termoDispositivo  = (navigator.userAgent || '').substring(0, 180);
+
+  mcAtualizarSeloTermo();
+
+  var aviso = document.getElementById('aceite-aviso');
+  if (aviso) {
+    aviso.classList.add('is-ok');
+    aviso.innerHTML = '✅ <strong>Termo de Responsabilidade aceito</strong> em ' + order.termoDataHora +
+                      ' (versão ' + MC_TERMO_VERSAO + '). O registro do aceite consta no seu comprovante.';
+  }
+
+  mcTrack('termo_aceito', {
+    numero_pedido: order.numeroPedido || '',
+    versao: MC_TERMO_VERSAO,
+    data_hora: order.termoTimestampISO
+  });
+
+  var acao = mcTermoAcaoPendente;
+  mcFecharTermo();
+
+  // Retoma a ação que o cliente havia solicitado
+  if (acao === 'whatsapp')    sendWhatsapp();
+  else if (acao === 'pdf')    baixarComprovantePDF();
+  else if (acao === 'imagem') baixarComprovanteImagem();
+}
+
+// Escreve o selo do aceite no comprovante (entra no PDF e na imagem)
+function mcAtualizarSeloTermo() {
+  var sec = document.getElementById('resumo-termo-section');
+  var box = document.getElementById('resumo-termo');
+  if (!sec || !box) return;
+  if (!order.termoAceito) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  var h = '';
+  h += resumoItem('Situação', 'Aceito eletronicamente pelo CONTRATANTE');
+  h += resumoItem('Versão do termo', MC_TERMO_VERSAO);
+  h += resumoItem('Data e hora do aceite', order.termoDataHora);
+  h += resumoItem('Aceito por', (order.nome || '—') + ' – ' + (order.documento || '—'));
+  box.innerHTML = h;
 }
 
 // ============================================================
@@ -3266,6 +3628,8 @@ function initConsentimento() {
   selectPagamento('pix');
   selectTipoCadastro('cpf');
   carregarBairros();
+  var __termoCorpo = document.getElementById('termoCorpo');
+  if (__termoCorpo) __termoCorpo.addEventListener('scroll', mcTermoScroll);
   selectService('kit');      // padrão: chope + chopeira inclusa
   applyDataEntregaUI();
   goToStep(3);               // o fluxo agora começa pela etapa Barris
