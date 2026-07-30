@@ -6,7 +6,8 @@
     no fim do body). O GTM carrega em todas as visitas, porem em estado de
     consentimento NEGADO por padrao (sem cookies/dados pessoais ate o aceite);
     no aceite, o consentimento e atualizado para concedido. O Meta Pixel carrega
-    somente apos o aceite. IDs: GTM-KF2FLHXP | Meta Pixel 914120313472470 (agencia) + 2222323591897098 (proprio - sobreposicao/treino)
+    somente apos o aceite. A tag do Google Ads (gtag.js) tambem carrega somente
+    apos o aceite. IDs: GTM-KF2FLHXP | Meta Pixel 914120313472470 (agencia) + 2222323591897098 (proprio - sobreposicao/treino) | Google Ads AW-18360968687 (proprio)
   -->
 
   <!-- Verificação de domínio Meta (apenas verificação, não rastreia) -->
@@ -3023,6 +3024,18 @@ function dispararConversao() {
         num_items: numBarris
       });
     }
+
+    // ---- Google Ads (conta propria) ----
+    // Conversao "Pedido WhatsApp - Site" (categoria Lead). Dispara no mesmo
+    // ponto do Lead do Pixel e herda a mesma guarda idempotente (__converteu).
+    // So dispara se o cliente aceitou os cookies (a tag so carrega no aceite).
+    if (__adsLoaded && typeof gtag === 'function') {
+      gtag('event', 'conversion', {
+        'send_to': MC_GADS_SEND_TO,
+        'value': total,
+        'currency': 'BRL'
+      });
+    }
   } catch (e) {
     // Nunca interromper o envio ao WhatsApp por causa de rastreamento
     if (window.console && console.warn) console.warn('Falha ao disparar conversão:', e);
@@ -3487,6 +3500,16 @@ function updateProgress(current) { renderProgress(current); }
 var COOKIE_CONSENT_KEY = 'mc_cookie_consent';   // 'accepted' | 'declined' (mesma chave/valores da landing /lp)
 var __gtmLoaded = false;
 var __metaLoaded = false;
+var __adsLoaded = false;   // tag do Google Ads (gtag.js) - carrega somente apos o aceite
+
+// ============================================================
+//  GOOGLE ADS (conta propria) - IDs da tag e da conversao.
+//  A tag base (gtag.js) carrega SOMENTE apos o consentimento,
+//  igual ao Meta Pixel. O evento de conversao "Pedido WhatsApp - Site"
+//  dispara junto com o Lead do Pixel (ver dispararConversao()).
+// ============================================================
+var MC_GADS_ID      = 'AW-18360968687';
+var MC_GADS_SEND_TO = 'AW-18360968687/2jEVCJTFqdkcEO_LmLNE';
 
 // dataLayer + gtag: necessarios para o Google Consent Mode v2
 window.dataLayer = window.dataLayer || [];
@@ -3567,6 +3590,21 @@ function carregarMetaPixel() {
   fbq('track', 'PageView');        // dispara para os DOIS Pixels inicializados
 }
 
+// Carrega a tag do Google Ads (gtag.js, conta propria) - somente apos o aceite.
+// O gtag() ja existe acima (Consent Mode v2); aqui apenas injetamos o script
+// e registramos a configuracao da conta. Sem consentimento, nada e carregado.
+function carregarGoogleAds() {
+  if (__adsLoaded) return;
+  __adsLoaded = true;
+  var s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=' + MC_GADS_ID;
+  var f = document.getElementsByTagName('script')[0];
+  f.parentNode.insertBefore(s, f);
+  gtag('js', new Date());
+  gtag('config', MC_GADS_ID);
+}
+
 function esconderBannerCookies() {
   var b = document.getElementById('cookieBanner');
   if (b) b.classList.remove('show');
@@ -3581,6 +3619,7 @@ function aceitarCookies() {
   esconderBannerCookies();
   concederConsentGoogle();                 // Google: libera cookies/medicao completa
   try { carregarMetaPixel(); } catch (e) {} // Meta: carrega o Pixel apos o aceite
+  try { carregarGoogleAds(); } catch (e) {} // Google Ads: carrega a tag apos o aceite
 }
 function recusarCookies() {
   salvarConsentimento('declined');
@@ -3604,6 +3643,7 @@ function initConsentimento() {
   if (c === 'accepted') {
     concederConsentGoogle();
     try { carregarMetaPixel(); } catch (e) {}
+    try { carregarGoogleAds(); } catch (e) {}
   } else if (c === 'declined') {
     negarConsentGoogle();
   }
