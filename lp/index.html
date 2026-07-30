@@ -548,6 +548,22 @@ function carregarPixel(){
   fbq('track','PageView');        // dispara para os DOIS Pixels inicializados
 }
 
+/* 3b) Tag do Google Ads (gtag.js, conta propria AW-18360968687) - somente apos
+   o consentimento, igual ao Pixel. A LP e a pagina de destino dos anuncios;
+   a tag aqui garante a atribuicao do clique ate o pedido no site (mesmo dominio).
+   A conversao em si (Pedido WhatsApp - Site) dispara apenas no index.html. */
+function carregarGoogleAds(){
+  if (window.__mc_gads_loaded) return;
+  window.__mc_gads_loaded = true;
+  var s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=AW-18360968687';
+  var f = document.getElementsByTagName('script')[0];
+  f.parentNode.insertBefore(s, f);
+  gtag('js', new Date());
+  gtag('config', 'AW-18360968687');
+}
+
 /* 4) Concede o consentimento: atualiza o Consent Mode pra "granted" e sobe o Pixel. */
 function concederConsentimento(){
   gtag('consent','update',{
@@ -559,6 +575,7 @@ function concederConsentimento(){
     personalization_storage:'granted'
   });
   carregarPixel();
+  carregarGoogleAds();
 }
 
 /* 5) Banner + decisão do usuário (escolha compartilhada com o site via mesma chave). */
