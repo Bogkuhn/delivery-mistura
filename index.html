@@ -1881,6 +1881,44 @@ function lerCookie(nome) {
   return '';
 }
 
+// ============================================================
+//  GOOGLE ADS - GCLID (importacao de conversao offline "Pedido Pago")
+//  O GCLID e o identificador de clique que o Google adiciona a URL
+//  (?gclid=...) quando alguem chega por um anuncio. Guardamos SO quando
+//  o cliente ACEITA os cookies (mesma regra do _fbp/_fbc do Pixel), num
+//  cookie proprio de 1a parte (_mc_gclid, 90 dias). Depois ele viaja no
+//  pedido ate o Apps Script e alimenta o upload de conversao offline ao
+//  Google Ads (quem realmente pagou). Nunca contem dado pessoal.
+// ============================================================
+var MC_GCLID_COOKIE = '_mc_gclid';
+var MC_GCLID_DIAS   = 90;
+
+function gravarCookie(nome, valor, dias) {
+  try {
+    var d = new Date();
+    d.setTime(d.getTime() + dias * 24 * 60 * 60 * 1000);
+    document.cookie = nome + '=' + encodeURIComponent(valor) +
+      ';expires=' + d.toUTCString() + ';path=/;SameSite=Lax';
+  } catch (e) { /* modo privado/sem storage: segue sem persistir */ }
+}
+
+// Le o gclid da URL (?gclid=...). Leitura passiva - nao persiste sozinha.
+function lerGclidDaUrl() {
+  try { return new URLSearchParams(location.search).get('gclid') || ''; }
+  catch (e) { return ''; }
+}
+
+// Persiste o gclid no cookie de 1a parte. Chamada SOMENTE apos o aceite.
+function persistirGclid() {
+  var g = lerGclidDaUrl();
+  if (g) gravarCookie(MC_GCLID_COOKIE, g, MC_GCLID_DIAS);
+}
+
+// Devolve o gclid vigente (cookie). '' se nao houver / sem consentimento.
+function obterGclid() {
+  return lerCookie(MC_GCLID_COOKIE) || '';
+}
+
 const order = {
   service: 'kit',
   beers: {},
@@ -3254,6 +3292,9 @@ function registrarPedido(origem) {
         var __fbclid = new URLSearchParams(location.search).get('fbclid');
         if (__fbclid) __fbc = 'fb.1.' + Date.now() + '.' + __fbclid;
       }
+      // Google Ads: elo de clique (gclid) para o upload de conversao offline "Pedido Pago".
+      // So existe se o cliente aceitou os cookies (persistido em _mc_gclid no aceite).
+      var __gclid = obterGclid();
       mcTrack('pedido_enviado', {
         numero_pedido: order.numeroPedido || '',
         origem: origem || '',
@@ -3280,6 +3321,7 @@ function registrarPedido(origem) {
         data_nascimento: order.dataNascimento || '',
         fbp: __fbp,
         fbc: __fbc,
+        gclid: __gclid,
         // Aceite do Termo de Responsabilidade
         termo_aceito: order.termoAceito ? 'SIM' : 'NAO',
         termo_versao: order.termoVersao || '',
@@ -3602,7 +3644,11 @@ function carregarGoogleAds() {
   var f = document.getElementsByTagName('script')[0];
   f.parentNode.insertBefore(s, f);
   gtag('js', new Date());
-  gtag('config', MC_GADS_ID);
+  // allow_ad_personalization_signals:false -> desliga a coleta de remarketing SO nesta
+  // tag (escopo de config, nao afeta o GTM da agencia). Remarketing/publicos personalizados
+  // sao proibidos para alcool no Google Ads e o dado seria inutil (LGPD: dado minimo).
+  // Nao afeta o rastreamento de conversao "Pedido WhatsApp - Site".
+  gtag('config', MC_GADS_ID, { 'allow_ad_personalization_signals': false });
 }
 
 function esconderBannerCookies() {
@@ -3620,6 +3666,7 @@ function aceitarCookies() {
   concederConsentGoogle();                 // Google: libera cookies/medicao completa
   try { carregarMetaPixel(); } catch (e) {} // Meta: carrega o Pixel apos o aceite
   try { carregarGoogleAds(); } catch (e) {} // Google Ads: carrega a tag apos o aceite
+  try { persistirGclid(); } catch (e) {}    // Google Ads: guarda o gclid (clique de anuncio) apos o aceite
 }
 function recusarCookies() {
   salvarConsentimento('declined');
@@ -3644,6 +3691,7 @@ function initConsentimento() {
     concederConsentGoogle();
     try { carregarMetaPixel(); } catch (e) {}
     try { carregarGoogleAds(); } catch (e) {}
+    try { persistirGclid(); } catch (e) {}
   } else if (c === 'declined') {
     negarConsentGoogle();
   }
