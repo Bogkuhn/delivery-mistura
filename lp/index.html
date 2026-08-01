@@ -561,7 +561,34 @@ function carregarGoogleAds(){
   var f = document.getElementsByTagName('script')[0];
   f.parentNode.insertBefore(s, f);
   gtag('js', new Date());
-  gtag('config', 'AW-18360968687');
+  // allow_ad_personalization_signals:false -> desliga remarketing SO nesta tag (escopo de
+  // config; nao afeta o GTM da agencia). Proibido para alcool + dado minimo (LGPD).
+  // Nao afeta a conversao (que dispara so no index.html).
+  gtag('config', 'AW-18360968687', { 'allow_ad_personalization_signals': false });
+}
+
+/* 3c) GCLID (clique de anuncio) -> cookie proprio de 1a parte _mc_gclid (90 dias).
+   Guardado SOMENTE com consentimento (mesma regra do Pixel). A LP e o destino dos
+   anuncios, entao o gclid chega aqui primeiro; o cookie (path=/) viaja ate o site,
+   onde o pedido o envia ao Apps Script (upload de conversao offline "Pedido Pago").
+   Nao contem dado pessoal - e so o ID de clique do proprio anuncio. */
+var MC_GCLID_COOKIE = '_mc_gclid';
+var MC_GCLID_DIAS   = 90;
+function gravarCookie(nome, valor, dias){
+  try {
+    var d = new Date();
+    d.setTime(d.getTime() + dias*24*60*60*1000);
+    document.cookie = nome + '=' + encodeURIComponent(valor) +
+      ';expires=' + d.toUTCString() + ';path=/;SameSite=Lax';
+  } catch(e){}
+}
+function lerGclidDaUrl(){
+  try { return new URLSearchParams(location.search).get('gclid') || ''; }
+  catch(e){ return ''; }
+}
+function persistirGclid(){
+  var g = lerGclidDaUrl();
+  if (g) gravarCookie(MC_GCLID_COOKIE, g, MC_GCLID_DIAS);
 }
 
 /* 4) Concede o consentimento: atualiza o Consent Mode pra "granted" e sobe o Pixel. */
@@ -576,6 +603,7 @@ function concederConsentimento(){
   });
   carregarPixel();
   carregarGoogleAds();
+  persistirGclid();
 }
 
 /* 5) Banner + decisão do usuário (escolha compartilhada com o site via mesma chave). */
