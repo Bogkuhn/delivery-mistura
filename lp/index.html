@@ -859,11 +859,34 @@ mcTrack('visita_lp', {});
 
 /* 2) Cliques nos botões "Montar/Fazer meu pedido" (CTA -> formulário) */
 (function () {
+  // Propaga os IDs de clique (fbclid do Meta, gclid do Google) da URL da LP para
+  // o link do site, para que a atribuicao sobreviva ao salto LP -> site mesmo que
+  // o cliente clique no CTA ANTES de decidir sobre os cookies. Passar o ID de clique
+  // na URL entre paginas do proprio dominio NAO e armazenamento nem rastreio: o Pixel
+  // e o log so ocorrem no site, sob consentimento. A captura de fbc/gclid no site ja
+  // e travada por consentimento, entao quem recusar nao tem esses dados registrados.
+  function paramDaUrl(nome){
+    try { return new URLSearchParams(location.search).get(nome) || ''; }
+    catch(e){ return ''; }
+  }
+  var __fbclid = paramDaUrl('fbclid');
+  var __gclid  = paramDaUrl('gclid');
   var ctas = document.querySelectorAll('a[href^="https://deliverymistura.com.br"]');
   for (var i = 0; i < ctas.length; i++) {
-    ctas[i].addEventListener('click', function () {
-      mcTrack('clique_montar_pedido', { origem: this.id || 'cta' });
-    });
+    (function(cta){
+      // Anexa os IDs de clique ao destino, preservando qualquer querystring/hash ja existente.
+      if (__fbclid || __gclid) {
+        try {
+          var u = new URL(cta.getAttribute('href'), location.href);
+          if (__fbclid && !u.searchParams.get('fbclid')) u.searchParams.set('fbclid', __fbclid);
+          if (__gclid  && !u.searchParams.get('gclid'))  u.searchParams.set('gclid',  __gclid);
+          cta.setAttribute('href', u.toString());
+        } catch(e){}
+      }
+      cta.addEventListener('click', function () {
+        mcTrack('clique_montar_pedido', { origem: cta.id || 'cta' });
+      });
+    })(ctas[i]);
   }
 })();
 
