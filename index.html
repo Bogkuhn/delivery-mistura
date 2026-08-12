@@ -3285,12 +3285,18 @@ function registrarPedido(origem) {
         });
       }
       // Captura o elo de identidade da Meta (_fbp / _fbc) para o Purchase server-side (CAPI) futuro.
-      // Se nao houver cookie _fbc mas a URL trouxe fbclid (clique de anuncio), monta o fbc no formato esperado.
-      var __fbp = lerCookie('_fbp');
-      var __fbc = lerCookie('_fbc');
-      if (!__fbc) {
-        var __fbclid = new URLSearchParams(location.search).get('fbclid');
-        if (__fbclid) __fbc = 'fb.1.' + Date.now() + '.' + __fbclid;
+      // SO com consentimento aceito (LGPD), a mesma regra do gclid. Sem aceite, ficam
+      // vazios e a CAPI nao envia esses identificadores ao Meta.
+      // Se nao houver cookie _fbc mas a URL trouxe fbclid (clique de anuncio, propagado
+      // pela LP), monta o fbc no formato esperado.
+      var __fbp = '', __fbc = '';
+      if (lerConsentimento() === 'accepted') {
+        __fbp = lerCookie('_fbp');
+        __fbc = lerCookie('_fbc');
+        if (!__fbc) {
+          var __fbclid = new URLSearchParams(location.search).get('fbclid');
+          if (__fbclid) __fbc = 'fb.1.' + Date.now() + '.' + __fbclid;
+        }
       }
       // Google Ads: elo de clique (gclid) para o upload de conversao offline "Pedido Pago".
       // So existe se o cliente aceitou os cookies (persistido em _mc_gclid no aceite).
