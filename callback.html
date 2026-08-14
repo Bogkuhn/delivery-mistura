@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Autorização de integração</title>
+<style>
+  :root { --bg:#f6f4f1; --card:#fff; --ink:#26221f; --muted:#6b635c; --ok:#1f7a4d; --err:#a52c22; --line:#e3ded8; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px; background:var(--bg); color:var(--ink);
+         font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .card { max-width:720px; margin:0 auto; background:var(--card); border:1px solid var(--line);
+          border-radius:14px; padding:24px; }
+  h1 { font-size:20px; margin:0 0 4px; letter-spacing:-.01em; }
+  .sub { color:var(--muted); font-size:14px; margin:0 0 20px; }
+  .badge { display:inline-block; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; margin-bottom:14px; }
+  .badge.ok { background:#e8f4ed; color:var(--ok); }
+  .badge.err { background:#fbeae8; color:var(--err); }
+  label { display:block; font-size:12px; font-weight:600; text-transform:uppercase;
+          letter-spacing:.05em; color:var(--muted); margin:18px 0 6px; }
+  textarea { width:100%; min-height:120px; padding:12px; border:1px solid var(--line); border-radius:10px;
+             font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; resize:vertical;
+             background:#fbfaf9; color:var(--ink); }
+  input[type=text] { width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px;
+                     font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; background:#fbfaf9; }
+  button { margin-top:12px; padding:11px 18px; border:0; border-radius:10px; background:var(--ink);
+           color:#fff; font-size:14px; font-weight:600; cursor:pointer; }
+  button:active { transform:translateY(1px); }
+  .steps { margin:22px 0 0; padding:16px 18px; background:#fbfaf9; border:1px solid var(--line);
+           border-radius:10px; font-size:14px; }
+  .steps ol { margin:8px 0 0; padding-left:20px; }
+  .steps code { background:#efece8; padding:1px 5px; border-radius:4px;
+                font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  .warn { margin-top:18px; font-size:13px; color:var(--muted); border-top:1px solid var(--line); padding-top:14px; }
+  .hide { display:none; }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <div id="badge" class="badge ok">Aguardando retorno</div>
+  <h1>Autorização de integração</h1>
+  <p class="sub">Esta página apenas exibe o código devolvido pelo servidor de autorização. Nada é enviado ou armazenado.</p>
+
+  <div id="sucesso" class="hide">
+    <label for="code">Código de autorização</label>
+    <textarea id="code" readonly></textarea>
+    <button id="copiar" type="button">Copiar código</button>
+
+    <label for="state">State retornado</label>
+    <input id="state" type="text" readonly>
+
+    <div class="steps">
+      <strong>Próximo passo</strong>
+      <ol>
+        <li>Copie o código acima.</li>
+        <li>No Apps Script, execute <code>bsTrocarCodigo('&lt;code&gt;')</code>.</li>
+        <li>Confirme que o state acima é o mesmo exibido no log de <code>bsGerarUrlAutorizacao()</code>.</li>
+      </ol>
+      <p style="margin:10px 0 0;color:#a06a12"><strong>O código expira em 10 minutos.</strong></p>
+    </div>
+  </div>
+
+  <div id="erro" class="hide">
+    <label for="detalhe">Retorno do servidor</label>
+    <textarea id="detalhe" readonly></textarea>
+    <div class="steps">
+      <strong>O que fazer</strong>
+      <ol>
+        <li>Se for <code>no_scope_permission</code>, ajuste as permissões do usuário no BeerSales.</li>
+        <li>Se for <code>access_denied</code>, a autorização foi recusada — gere a URL novamente.</li>
+        <li>Se for <code>missing_scope</code>, revise a property <code>BS_SCOPES</code>.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div id="vazio">
+    <div class="steps">
+      Nenhum parâmetro recebido. Esta página só funciona quando acessada pelo
+      redirecionamento do servidor de autorização.
+    </div>
+  </div>
+
+  <p class="warn">Uso interno — Beer Flow Distribuidora LTDA. Processamento 100% no navegador.</p>
+</div>
+
+<script>
+(function () {
+  var q = new URLSearchParams(window.location.search);
+  var code = q.get('code');
+  var state = q.get('state');
+  var erro = q.get('error');
+
+  var badge = document.getElementById('badge');
+  var mostrar = function (id) { document.getElementById(id).classList.remove('hide'); };
+  var esconder = function (id) { document.getElementById(id).classList.add('hide'); };
+
+  if (code) {
+    esconder('vazio');
+    mostrar('sucesso');
+    badge.textContent = 'Autorização aprovada';
+    badge.className = 'badge ok';
+    document.getElementById('code').value = code;
+    document.getElementById('state').value = state || '(não retornado)';
+
+    document.getElementById('copiar').addEventListener('click', function () {
+      var ta = document.getElementById('code');
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(ta.value).then(function () {
+          document.getElementById('copiar').textContent = 'Copiado';
+        }).catch(function () {
+          document.getElementById('copiar').textContent = ok ? 'Copiado' : 'Copie manualmente';
+        });
+      } else {
+        document.getElementById('copiar').textContent = ok ? 'Copiado' : 'Copie manualmente';
+      }
+    });
+
+  } else if (erro) {
+    esconder('vazio');
+    mostrar('erro');
+    badge.textContent = 'Autorização recusada';
+    badge.className = 'badge err';
+    var linhas = [];
+    ['error', 'error_description', 'hint', 'message', 'state'].forEach(function (k) {
+      var v = q.get(k);
+      if (v) linhas.push(k + ': ' + v);
+    });
+    document.getElementById('detalhe').value = linhas.join('\n');
+
+  } else {
+    badge.textContent = 'Sem parâmetros';
+    badge.className = 'badge err';
+  }
+})();
+</script>
+</body>
+</html>
