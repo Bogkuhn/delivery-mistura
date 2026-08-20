@@ -3066,8 +3066,10 @@ function dispararConversao() {
     // ---- Google Ads (conta propria) ----
     // Conversao "Pedido WhatsApp - Site" (categoria Lead). Dispara no mesmo
     // ponto do Lead do Pixel e herda a mesma guarda idempotente (__converteu).
-    // So dispara se o cliente aceitou os cookies (a tag so carrega no aceite).
-    if (__adsLoaded && typeof gtag === 'function') {
+    // A tag carrega em TODA visita (Consent Mode v2): dispara para todos. Se o
+    // cliente recusou, o gtag envia um ping SEM cookie e SEM identificador, e o
+    // Google modela a conversao. Nenhum dado pessoal e gravado sem consentimento.
+    if (typeof gtag === 'function') {
       gtag('event', 'conversion', {
         'send_to': MC_GADS_SEND_TO,
         'value': total,
@@ -3548,13 +3550,15 @@ function updateProgress(current) { renderProgress(current); }
 var COOKIE_CONSENT_KEY = 'mc_cookie_consent';   // 'accepted' | 'declined' (mesma chave/valores da landing /lp)
 var __gtmLoaded = false;
 var __metaLoaded = false;
-var __adsLoaded = false;   // tag do Google Ads (gtag.js) - carrega somente apos o aceite
+var __adsLoaded = false;   // tag do Google Ads (gtag.js) - injetada em toda visita (Consent Mode v2)
 
 // ============================================================
 //  GOOGLE ADS (conta propria) - IDs da tag e da conversao.
-//  A tag base (gtag.js) carrega SOMENTE apos o consentimento,
-//  igual ao Meta Pixel. O evento de conversao "Pedido WhatsApp - Site"
-//  dispara junto com o Lead do Pixel (ver dispararConversao()).
+//  A tag base (gtag.js) carrega em TODA visita, em estado NEGADO por padrao
+//  (Consent Mode v2): sem cookies ate o aceite, mas apta a enviar pings sem
+//  cookie que permitem ao Google MODELAR as conversoes de quem recusou.
+//  O evento "Pedido WhatsApp - Site" dispara junto com o Lead do Pixel
+//  (ver dispararConversao()).
 // ============================================================
 var MC_GADS_ID      = 'AW-18360968687';
 var MC_GADS_SEND_TO = 'AW-18360968687/2jEVCJTFqdkcEO_LmLNE';
@@ -3638,9 +3642,10 @@ function carregarMetaPixel() {
   fbq('track', 'PageView');        // dispara para os DOIS Pixels inicializados
 }
 
-// Carrega a tag do Google Ads (gtag.js, conta propria) - somente apos o aceite.
-// O gtag() ja existe acima (Consent Mode v2); aqui apenas injetamos o script
-// e registramos a configuracao da conta. Sem consentimento, nada e carregado.
+// Carrega a tag do Google Ads (gtag.js, conta propria) - em TODA visita.
+// O gtag() ja existe acima (Consent Mode v2); aqui injetamos o script e
+// registramos a config. Em estado negado, a tag opera SEM cookies e envia
+// pings anonimos que alimentam a modelagem de conversoes do Google.
 function carregarGoogleAds() {
   if (__adsLoaded) return;
   __adsLoaded = true;
@@ -3650,6 +3655,9 @@ function carregarGoogleAds() {
   var f = document.getElementsByTagName('script')[0];
   f.parentNode.insertBefore(s, f);
   gtag('js', new Date());
+  // ads_data_redaction: com consentimento negado, o gtag redige identificadores
+  // de anuncio (ex.: gclid) do ping - modelagem sem qualquer dado pessoal.
+  gtag('set', 'ads_data_redaction', true);
   // allow_ad_personalization_signals:false -> desliga a coleta de remarketing SO nesta
   // tag (escopo de config, nao afeta o GTM da agencia). Remarketing/publicos personalizados
   // sao proibidos para alcool no Google Ads e o dado seria inutil (LGPD: dado minimo).
@@ -3687,21 +3695,22 @@ function abrirPreferenciasCookies() {
 
 // Decide o que fazer ao abrir a pagina
 function initConsentimento() {
-  // 1) Define o estado padrao como NEGADO antes de carregar o GTM
+  // 1) Define o estado padrao como NEGADO antes de qualquer tag
   definirConsentPadraoNegado();
-  // 2) Carrega o GTM em toda visita (detectavel; sem cookies ate o aceite)
-  try { carregarGTM(); } catch (e) {}
-  // 3) Aplica a escolha anterior, se houver
+  // 2) Aplica a escolha anterior AO ESTADO de consentimento, antes de carregar as tags
   var c = lerConsentimento();
+  if (c === 'accepted')      concederConsentGoogle();
+  else if (c === 'declined') negarConsentGoogle();
+  // 3) Carrega GTM + Google Ads em TODA visita (detectaveis; sem cookies ate o aceite).
+  //    Em estado negado, o Google Ads envia pings sem cookie -> modelagem de conversoes.
+  try { carregarGTM(); } catch (e) {}
+  try { carregarGoogleAds(); } catch (e) {}
+  // 4) Meta Pixel e gclid SO com aceite (a Meta nao tem ping sem cookie equivalente)
   if (c === 'accepted') {
-    concederConsentGoogle();
     try { carregarMetaPixel(); } catch (e) {}
-    try { carregarGoogleAds(); } catch (e) {}
     try { persistirGclid(); } catch (e) {}
-  } else if (c === 'declined') {
-    negarConsentGoogle();
   }
-  // se null -> o banner aparece apos o usuario confirmar 18+ (ver confirmAge)
+  // se c === null -> o banner aparece apos o usuario confirmar 18+ (ver confirmAge)
 }
 
 // ============================================================
