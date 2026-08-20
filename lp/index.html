@@ -550,9 +550,11 @@ function carregarPixel(){
   fbq('track','PageView');        // dispara para os DOIS Pixels inicializados
 }
 
-/* 3b) Tag do Google Ads (gtag.js, conta propria AW-18360968687) - somente apos
-   o consentimento, igual ao Pixel. A LP e a pagina de destino dos anuncios;
-   a tag aqui garante a atribuicao do clique ate o pedido no site (mesmo dominio).
+/* 3b) Tag do Google Ads (gtag.js, conta propria AW-18360968687) - carrega em
+   TODA visita, em estado NEGADO por padrao (Consent Mode v2), igual ao GTM.
+   A LP e a pagina de destino dos anuncios; a tag aqui garante a atribuicao do
+   clique ate o pedido no site (mesmo dominio) e, sob recusa, opera sem cookies
+   enviando pings anonimos que alimentam a modelagem do Google.
    A conversao em si (Pedido WhatsApp - Site) dispara apenas no index.html. */
 function carregarGoogleAds(){
   if (window.__mc_gads_loaded) return;
@@ -563,6 +565,9 @@ function carregarGoogleAds(){
   var f = document.getElementsByTagName('script')[0];
   f.parentNode.insertBefore(s, f);
   gtag('js', new Date());
+  // ads_data_redaction: com consentimento negado, o gtag redige identificadores
+  // de anuncio (ex.: gclid) do ping - modelagem sem qualquer dado pessoal.
+  gtag('set', 'ads_data_redaction', true);
   // allow_ad_personalization_signals:false -> desliga remarketing SO nesta tag (escopo de
   // config; nao afeta o GTM da agencia). Proibido para alcool + dado minimo (LGPD).
   // Nao afeta a conversao (que dispara so no index.html).
@@ -620,6 +625,11 @@ function concederConsentimento(){
   } else {
     banner.classList.add('show');       // ainda não escolheu
   }
+
+  // Google Ads carrega em TODA visita (estado "denied" por padrao): a tag opera
+  // sem cookies e envia pings anonimos que alimentam a modelagem de conversoes do
+  // Google. A conversao em si continua disparando so no index.html.
+  carregarGoogleAds();
 
   document.getElementById('cookie-aceitar').addEventListener('click', function(){
     salvarConsentimento('accepted');
