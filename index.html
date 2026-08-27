@@ -1425,6 +1425,17 @@
           <input type="date" class="form-input" id="pickupDate" min="" max="" onchange="order.pickupDate=this.value">
           <div class="form-error" id="err-pickup-date">Selecione a data da recolha.</div>
         </div>
+        <div id="pickup-day-choice" style="display:none;margin-bottom:4px;">
+          <label class="form-label" style="display:block;margin-bottom:8px;">Dia da recolha <span class="required">*</span></label>
+          <div class="delivery-option selected" id="pday-evento" onclick="selectPickupDay(0)">
+            <div class="radio-circle"><div class="radio-inner"></div></div>
+            <div class="delivery-option-text"><h4>No dia do evento</h4><p>Recolha após a festa, no mesmo dia da entrega.</p></div>
+          </div>
+          <div class="delivery-option" id="pday-seguinte" onclick="selectPickupDay(1)">
+            <div class="radio-circle"><div class="radio-inner"></div></div>
+            <div class="delivery-option-text"><h4>No dia seguinte</h4><p>Recolha na manhã seguinte ao evento. Sem custo de diária — apenas o carro exclusivo.</p></div>
+          </div>
+        </div>
         <div class="form-group">
           <label class="form-label">Horário exato para recolha <span class="required">*</span></label>
           <div id="pickup-date-info" class="info-box" style="display:none;margin-bottom:12px;font-weight:600;color:var(--gold);"></div>
@@ -1933,6 +1944,7 @@ const order = {
   pickupType: 'rota',
   pickupTime: '',
   pickupDate: '',
+  pickupDayOffset: 0,  // recolha dedicada (Kit/Aluguel): 0 = dia do evento, 1 = dia seguinte
   deliveryTime: '',
   diarias: 0,
   eventDate: '',
@@ -2272,10 +2284,13 @@ function updatePickupDate() {
   var dateVal = document.getElementById('eventDate').value;
   if (!dateVal) return;
   var d = new Date(dateVal + 'T12:00:00');
-  d.setDate(d.getDate() + (order.diarias || 0));
+  // recolha dedicada (Kit/Aluguel) = data do evento + diárias extras + deslocamento do dia
+  // deslocamento: 0 = dia do evento (após a festa) | 1 = dia seguinte (sem custo de diária)
+  d.setDate(d.getDate() + (order.diarias || 0) + (order.pickupDayOffset || 0));
   var day   = String(d.getDate()).padStart(2, '0');
   var month = String(d.getMonth() + 1).padStart(2, '0');
   var year  = d.getFullYear();
+  order.pickupDate = year + '-' + month + '-' + day; // grava a data efetiva p/ resumo e mensagem
   var el = document.getElementById('pickup-date-info');
   if (el) {
     el.textContent = 'Data de recolha: ' + day + '/' + month + '/' + year;
@@ -2303,16 +2318,26 @@ function setPickupDateLimits() {
 // Mostra/oculta o campo certo da recolha conforme o servico
 function updatePickupUI() {
   var isBarris = (order.service === 'barris');
-  var dateWrap = document.getElementById('pickup-date-wrap'); // input de data (Somente Barris)
-  var dateInfo = document.getElementById('pickup-date-info'); // texto auto (Kit/Aluguel)
+  var dateWrap  = document.getElementById('pickup-date-wrap');   // input de data (Somente Barris)
+  var dateInfo  = document.getElementById('pickup-date-info');   // texto auto da data (Kit/Aluguel)
+  var dayChoice = document.getElementById('pickup-day-choice');  // escolha dia do evento / dia seguinte (Kit/Aluguel)
   if (isBarris) {
-    if (dateInfo) dateInfo.style.display = 'none';
-    if (dateWrap) dateWrap.style.display = (order.pickupType === 'exclusivo') ? 'block' : 'none';
+    // Somente Barris: campo de data livre (janela de 7 dias); sem escolha de dia
+    if (dateInfo)  dateInfo.style.display = 'none';
+    if (dayChoice) dayChoice.style.display = 'none';
+    if (dateWrap)  dateWrap.style.display = (order.pickupType === 'exclusivo') ? 'block' : 'none';
     setPickupDateLimits();
   } else {
+    // Kit/Aluguel: sem campo de data livre; usa escolha de dia + diárias
     if (dateWrap) dateWrap.style.display = 'none';
-    if (order.pickupType === 'exclusivo') { updatePickupDate(); }
-    else if (dateInfo) { dateInfo.style.display = 'none'; }
+    if (order.pickupType === 'exclusivo') {
+      if (dayChoice) dayChoice.style.display = 'block';
+      updatePickupDate();
+    } else {
+      if (dayChoice) dayChoice.style.display = 'none';
+      if (dateInfo)  dateInfo.style.display = 'none';
+      order.pickupDate = ''; // sem recolha dedicada => sem data específica
+    }
   }
 }
 
@@ -2350,6 +2375,19 @@ function selectPickup(type) {
   document.getElementById('pick-' + type).classList.add('selected');
   document.getElementById('pickup-hora-input').style.display = type === 'exclusivo' ? 'block' : 'none';
   updatePickupUI();
+}
+
+// Escolha do dia da recolha dedicada (Kit/Aluguel): 0 = dia do evento | 1 = dia seguinte
+// NÃO altera order.diarias nem o total — apenas desloca a data efetiva da recolha.
+function selectPickupDay(offset) {
+  order.pickupDayOffset = offset;
+  ['pday-evento','pday-seguinte'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('selected');
+  });
+  var sel = document.getElementById(offset === 1 ? 'pday-seguinte' : 'pday-evento');
+  if (sel) sel.classList.add('selected');
+  updatePickupDate();
 }
 
 // ============================================================
@@ -2970,7 +3008,7 @@ function buildResumo() {
       ? 'Rota Compartilhada (recolha em até 1 semana, a combinar via WhatsApp, sem custo)'
       : 'Rota Compartilhada (08h-16h, incluso)';
   } else {
-    var pdFmt = (order.service === 'barris' && order.pickupDate) ? order.pickupDate.split('-').reverse().join('/') : '';
+    var pdFmt = order.pickupDate ? order.pickupDate.split('-').reverse().join('/') : '';
     pickupTxt = 'Hora Marcada - Carro Exclusivo (+R$200)'
       + (pdFmt ? ' – ' + pdFmt : '')
       + (order.pickupTime ? (pdFmt ? ' às ' : ' - ') + order.pickupTime : '');
@@ -3209,7 +3247,7 @@ function montarResumoCompleto() {
   if (order.pickupType === 'rota') {
     recolhaMsg = (order.service === 'barris') ? 'Rota Compartilhada (em até 1 semana, a combinar)' : 'Rota Compartilhada (08h-16h)';
   } else {
-    var pdMsg = (order.service === 'barris' && order.pickupDate) ? order.pickupDate.split('-').reverse().join('/') : '';
+    var pdMsg = order.pickupDate ? order.pickupDate.split('-').reverse().join('/') : '';
     recolhaMsg = 'Hora Marcada - Carro Exclusivo (+R$200)' + (pdMsg ? ' em ' + pdMsg : '') + (order.pickupTime ? ' às ' + order.pickupTime : '');
   }
   L.push('  - Recolha: ' + recolhaMsg);
@@ -3727,6 +3765,7 @@ function initConsentimento() {
   initDateMin();
   selectDelivery('rota');
   selectPickup('rota');
+  selectPickupDay(0);
   selectDiarias(0);
   selectPagamento('pix');
   selectTipoCadastro('cpf');
