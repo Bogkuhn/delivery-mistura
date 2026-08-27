@@ -1427,14 +1427,8 @@
         </div>
         <div id="pickup-day-choice" style="display:none;margin-bottom:4px;">
           <label class="form-label" style="display:block;margin-bottom:8px;">Dia da recolha <span class="required">*</span></label>
-          <div class="delivery-option selected" id="pday-evento" onclick="selectPickupDay(0)">
-            <div class="radio-circle"><div class="radio-inner"></div></div>
-            <div class="delivery-option-text"><h4>No dia do evento</h4><p>Recolha após a festa, no mesmo dia da entrega.</p></div>
-          </div>
-          <div class="delivery-option" id="pday-seguinte" onclick="selectPickupDay(1)">
-            <div class="radio-circle"><div class="radio-inner"></div></div>
-            <div class="delivery-option-text"><h4>No dia seguinte</h4><p>Recolha na manhã seguinte ao evento. Sem custo de diária — apenas o carro exclusivo.</p></div>
-          </div>
+          <div id="recolha-dia-opts"><!-- opções geradas por renderRecolhaDiaOpcoes() --></div>
+          <p style="color:var(--muted);font-size:12px;margin-top:4px;">O dia do evento e o dia seguinte não têm custo de diária — apenas o carro exclusivo. A partir do 2º dia após o evento, cada diária extra é somada.</p>
         </div>
         <div class="form-group">
           <label class="form-label">Horário exato para recolha <span class="required">*</span></label>
@@ -2320,7 +2314,13 @@ function updatePickupUI() {
   var isBarris = (order.service === 'barris');
   var dateWrap  = document.getElementById('pickup-date-wrap');   // input de data (Somente Barris)
   var dateInfo  = document.getElementById('pickup-date-info');   // texto auto da data (Kit/Aluguel)
-  var dayChoice = document.getElementById('pickup-day-choice');  // escolha dia do evento / dia seguinte (Kit/Aluguel)
+  var dayChoice = document.getElementById('pickup-day-choice');  // escolha do dia da recolha (Kit/Aluguel)
+
+  // Diárias extras só aparecem na recolha COMPARTILHADA de Kit/Aluguel. Na
+  // recolha dedicada elas entram embutidas na escolha do dia (menu some).
+  var diarSec = document.getElementById('diarias-section');
+  if (diarSec) diarSec.style.display = (!isBarris && order.pickupType === 'rota') ? 'block' : 'none';
+
   if (isBarris) {
     // Somente Barris: campo de data livre (janela de 7 dias); sem escolha de dia
     if (dateInfo)  dateInfo.style.display = 'none';
@@ -2328,10 +2328,11 @@ function updatePickupUI() {
     if (dateWrap)  dateWrap.style.display = (order.pickupType === 'exclusivo') ? 'block' : 'none';
     setPickupDateLimits();
   } else {
-    // Kit/Aluguel: sem campo de data livre; usa escolha de dia + diárias
+    // Kit/Aluguel: sem campo de data livre; usa a escolha do dia da recolha
     if (dateWrap) dateWrap.style.display = 'none';
     if (order.pickupType === 'exclusivo') {
       if (dayChoice) dayChoice.style.display = 'block';
+      renderRecolhaDiaOpcoes();
       updatePickupDate();
     } else {
       if (dayChoice) dayChoice.style.display = 'none';
@@ -2374,20 +2375,68 @@ function selectPickup(type) {
   ['pick-rota','pick-exclusivo'].forEach(function(id){ document.getElementById(id).classList.remove('selected'); });
   document.getElementById('pick-' + type).classList.add('selected');
   document.getElementById('pickup-hora-input').style.display = type === 'exclusivo' ? 'block' : 'none';
+  // Ao alternar o tipo de recolha, zera diárias/deslocamento para um estado limpo.
+  // Recolha dedicada: as diárias passam a ser definidas pelo DIA da recolha (menu
+  // de diárias some). Recolha compartilhada: o menu de diárias reaparece (começa em 0).
+  if (order.service !== 'barris') {
+    order.pickupDayOffset = 0;
+    order.diarias = 0;
+    ['diar-0','diar-1','diar-2'].forEach(function(id){ var e = document.getElementById(id); if (e) e.classList.remove('selected'); });
+    var d0 = document.getElementById('diar-0'); if (d0) d0.classList.add('selected');
+  }
   updatePickupUI();
 }
 
-// Escolha do dia da recolha dedicada (Kit/Aluguel): 0 = dia do evento | 1 = dia seguinte
-// NÃO altera order.diarias nem o total — apenas desloca a data efetiva da recolha.
-function selectPickupDay(offset) {
-  order.pickupDayOffset = offset;
-  ['pday-evento','pday-seguinte'].forEach(function(id){
-    var el = document.getElementById(id);
-    if (el) el.classList.remove('selected');
-  });
-  var sel = document.getElementById(offset === 1 ? 'pday-seguinte' : 'pday-evento');
-  if (sel) sel.classList.add('selected');
+// Recolha dedicada (Kit/Aluguel): UMA escolha só — o dia da recolha, R = 0..3
+// dias após o evento. As DIÁRIAS são derivadas do dia (não há mais menu à parte):
+//   R=0 (dia do evento) e R=1 (dia seguinte) → 0 diárias (só o carro R$200)
+//   R=2 → 1 diária (+R$150)   |   R=3 → 2 diárias (+R$200)
+// O offset e order.diarias são setados de modo que a data (= evento + diarias +
+// offset) dê exatamente evento + R, e o total (calcTotal) feche sozinho.
+function recolhaDiaAtual() {
+  return (order.pickupDayOffset === 0) ? 0 : (order.diarias + 1);
+}
+
+function selectRecolhaDia(R) {
+  order.pickupDayOffset = (R === 0) ? 0 : 1;  // 0 = mesmo dia; senão dia seguinte (+ diárias)
+  order.diarias = Math.max(0, R - 1);         // D+2 = 1 diária, D+3 = 2 diárias
+  renderRecolhaDiaOpcoes();
   updatePickupDate();
+}
+
+// Monta as opções de dia da recolha dedicada a partir da data do evento.
+// Custo mostrado = carro exclusivo (R$200) + diárias embutidas no dia escolhido.
+function renderRecolhaDiaOpcoes() {
+  var box = document.getElementById('recolha-dia-opts');
+  if (!box) return;
+  var dateVal = document.getElementById('eventDate').value;
+  if (!dateVal) {
+    box.innerHTML = '<p style="color:var(--muted);font-size:13px;">Escolha a data do evento acima para ver as opções de recolha.</p>';
+    return;
+  }
+  var base    = new Date(dateVal + 'T12:00:00');
+  var extra   = [0, 0, 150, 200];  // custo de diária embutido por R (0..3)
+  var titulos = ['No dia do evento', 'No dia seguinte', '2 dias após o evento', '3 dias após o evento'];
+  var atual   = recolhaDiaAtual();
+  var html = '';
+  for (var R = 0; R <= 3; R++) {
+    var d = new Date(base.getTime());
+    d.setDate(d.getDate() + R);
+    var dd = String(d.getDate()).padStart(2, '0');
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var yy = d.getFullYear();
+    var custoTotal = 200 + extra[R];
+    var detalhe = (extra[R] === 0)
+      ? 'Apenas o carro exclusivo'
+      : (R - 1) + ' diária(s) extra (+R$ ' + extra[R] + ')';
+    html += '<div class="delivery-option' + (R === atual ? ' selected' : '') +
+            '" id="rdia-' + R + '" onclick="selectRecolhaDia(' + R + ')">' +
+            '<div class="radio-circle"><div class="radio-inner"></div></div>' +
+            '<div class="delivery-option-text"><h4>' + titulos[R] + ' — ' + dd + '/' + mm + '/' + yy + '</h4>' +
+            '<p>' + detalhe + '</p></div>' +
+            '<div class="delivery-option-price">+ R$ ' + custoTotal + '</div></div>';
+  }
+  box.innerHTML = html;
 }
 
 // ============================================================
@@ -3765,7 +3814,6 @@ function initConsentimento() {
   initDateMin();
   selectDelivery('rota');
   selectPickup('rota');
-  selectPickupDay(0);
   selectDiarias(0);
   selectPagamento('pix');
   selectTipoCadastro('cpf');
