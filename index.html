@@ -16,6 +16,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cervejaria Mistura Clássica – Monte seu Pedido</title>
+
+  <!-- Open Graph / WhatsApp, Facebook, etc. link preview -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Mistura Clássica">
+  <meta property="og:title" content="Mistura Clássica">
+  <meta property="og:description" content="Conheça os produtos e ofertas e faça seu pedido!">
+  <meta property="og:image" content="https://deliverymistura.com.br/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="https://deliverymistura.com.br/">
+  <meta property="og:locale" content="pt_BR">
+
+  <!-- Twitter Card (usado por alguns apps/plataformas para gerar preview também) -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Mistura Clássica">
+  <meta name="twitter:description" content="Conheça os produtos e ofertas e faça seu pedido!">
+  <meta name="twitter:image" content="https://deliverymistura.com.br/og-image.jpg">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
@@ -2777,6 +2795,49 @@ function maskDoc(el) {
   el.value = v;
 }
 
+// Validação de CPF (algoritmo dos dígitos verificadores - módulo 11)
+function isValidCPF(cpf) {
+  cpf = String(cpf).replace(/\D/g, '');
+  if (cpf.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(cpf)) return false; // todos os dígitos iguais
+  let soma = 0;
+  for (let i = 0; i < 9; i++) soma += parseInt(cpf.charAt(i), 10) * (10 - i);
+  let resto = (soma * 10) % 11;
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(cpf.charAt(9), 10)) return false;
+  soma = 0;
+  for (let i = 0; i < 10; i++) soma += parseInt(cpf.charAt(i), 10) * (11 - i);
+  resto = (soma * 10) % 11;
+  if (resto === 10 || resto === 11) resto = 0;
+  if (resto !== parseInt(cpf.charAt(10), 10)) return false;
+  return true;
+}
+
+// Validação de CNPJ (algoritmo dos dígitos verificadores - módulo 11)
+function isValidCNPJ(cnpj) {
+  cnpj = String(cnpj).replace(/\D/g, '');
+  if (cnpj.length !== 14) return false;
+  if (/^(\d)\1{13}$/.test(cnpj)) return false; // todos os dígitos iguais
+  const calcDigito = (base, pesos) => {
+    let soma = 0;
+    for (let i = 0; i < pesos.length; i++) soma += parseInt(base.charAt(i), 10) * pesos[i];
+    const resto = soma % 11;
+    return resto < 2 ? 0 : 11 - resto;
+  };
+  const pesos1 = [5,4,3,2,9,8,7,6,5,4,3,2];
+  const pesos2 = [6,5,4,3,2,9,8,7,6,5,4,3,2];
+  const d1 = calcDigito(cnpj, pesos1);
+  if (d1 !== parseInt(cnpj.charAt(12), 10)) return false;
+  const d2 = calcDigito(cnpj, pesos2);
+  if (d2 !== parseInt(cnpj.charAt(13), 10)) return false;
+  return true;
+}
+
+// Valida CPF ou CNPJ de acordo com o tipo de cadastro selecionado
+function isValidDocumento(doc, tipo) {
+  return tipo === 'cpf' ? isValidCPF(doc) : isValidCNPJ(doc);
+}
+
 function maskTel(el) {
   let v = el.value.replace(/\D/g, '').slice(0, 11);
   if (v.length > 10)     v = v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
@@ -2897,8 +2958,16 @@ function goToStep6() {
 
   const doc = document.getElementById('documento').value.replace(/\D/g,'');
   const docMinLen = order.tipoCadastro === 'cpf' ? 11 : 14;
-  if (doc.length < docMinLen) { document.getElementById('err-doc').style.display = 'block'; valid = false; }
-  else document.getElementById('err-doc').style.display = 'none';
+  const errDocEl = document.getElementById('err-doc');
+  if (doc.length < docMinLen) {
+    errDocEl.textContent = 'Documento inválido.';
+    errDocEl.style.display = 'block'; valid = false;
+  } else if (!isValidDocumento(doc, order.tipoCadastro)) {
+    errDocEl.textContent = order.tipoCadastro === 'cpf' ? 'CPF inválido.' : 'CNPJ inválido.';
+    errDocEl.style.display = 'block'; valid = false;
+  } else {
+    errDocEl.style.display = 'none';
+  }
 
   // Data de nascimento: obrigatória para CPF, com verificação de maioridade
   var nascEl2  = document.getElementById('dataNascimento');
