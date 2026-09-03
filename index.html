@@ -879,6 +879,10 @@
       <div class="dot-circle">✓</div>
       <div class="dot-label">Resumo</div>
     </div>
+    <div class="step-dot" id="prog8">
+      <div class="dot-circle">8</div>
+      <div class="dot-label">Pagamento</div>
+    </div>
   </div>
 </div>
 
@@ -1663,25 +1667,130 @@
     </div>
     </div><!-- /#comprovante -->
 
-    <div class="mc-aceite-aviso" id="aceite-aviso">
-      📄 Para finalizar, será necessário ler e aceitar o
-      <a href="termo-de-responsabilidade.html" target="_blank" rel="noopener" class="mc-termo-link">Termo de Responsabilidade</a>,
-      que reúne as condições de fornecimento e a responsabilidade pela guarda dos equipamentos.
-      O termo abrirá ao clicar em qualquer um dos botões abaixo.
+    <!-- BLOCO A: fluxo BLOQUEADO (data de alta demanda / barril 10-20L) — como sempre foi -->
+    <div id="resumo-acoes-bloqueado">
+      <div class="mc-aceite-aviso" id="aceite-aviso">
+        📄 Para finalizar, será necessário ler e aceitar o
+        <a href="termo-de-responsabilidade.html" target="_blank" rel="noopener" class="mc-termo-link">Termo de Responsabilidade</a>,
+        que reúne as condições de fornecimento e a responsabilidade pela guarda dos equipamentos.
+        O termo abrirá ao clicar em qualquer um dos botões abaixo.
+      </div>
+
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:18px 0 4px;">
+        <button class="btn-secondary" onclick="baixarComprovantePDF()" style="flex:1;min-width:160px;">⬇️ Baixar PDF</button>
+        <button class="btn-secondary" onclick="baixarComprovanteImagem()" style="flex:1;min-width:160px;">🖼️ Baixar Imagem</button>
+      </div>
+      <p style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:8px;">Salve o comprovante do seu pedido em PDF ou imagem.</p>
+
+      <div class="btn-row" style="justify-content:center;flex-direction:column;align-items:center;">
+        <a href="#" id="btnWhatsapp" class="btn-whatsapp" onclick="sendWhatsapp()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          Confirmar Pedido no WhatsApp
+        </a>
+        <button class="btn-secondary" onclick="goToStep(6)" style="margin-top:12px;">← Editar Pedido</button>
+      </div>
     </div>
 
-    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:18px 0 4px;">
-      <button class="btn-secondary" onclick="baixarComprovantePDF()" style="flex:1;min-width:160px;">⬇️ Baixar PDF</button>
-      <button class="btn-secondary" onclick="baixarComprovanteImagem()" style="flex:1;min-width:160px;">🖼️ Baixar Imagem</button>
+    <!-- BLOCO B: fluxo LIBERADO (pagamento online disponível) — só o botão Pagar -->
+    <div id="resumo-acoes-liberado" style="display:none;">
+      <div class="mc-aceite-aviso" id="aceite-aviso-liberado">
+        📄 Para pagar, será necessário ler e aceitar o
+        <a href="termo-de-responsabilidade.html" target="_blank" rel="noopener" class="mc-termo-link">Termo de Responsabilidade</a>,
+        que reúne as condições de fornecimento e a responsabilidade pela guarda dos equipamentos.
+        O termo abrirá ao clicar em Pagar.
+      </div>
+      <div class="btn-row" style="justify-content:center;flex-direction:column;align-items:center;margin-top:18px;">
+        <button class="btn-primary" onclick="cliqueEmPagar()" style="min-width:220px;font-size:17px;">💳 Pagar</button>
+        <button class="btn-secondary" onclick="goToStep(5)" style="margin-top:12px;">← Editar Pedido</button>
+      </div>
     </div>
-    <p style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:8px;">Salve o comprovante do seu pedido em PDF ou imagem.</p>
+  </div>
 
-    <div class="btn-row" style="justify-content:center;flex-direction:column;align-items:center;">
-      <a href="#" id="btnWhatsapp" class="btn-whatsapp" onclick="sendWhatsapp()">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        Confirmar Pedido no WhatsApp
-      </a>
-      <button class="btn-secondary" onclick="goToStep(6)" style="margin-top:12px;">← Editar Pedido</button>
+  <!-- ETAPA 8 (div step8): Pagamento real (PIX/Cartão via Asaas) -->
+  <div id="step8" class="step-content" style="display:none;">
+    <div class="card">
+      <h2 class="card-title">Pagamento 💳</h2>
+      <p class="card-subtitle">Pedido <strong id="pag-numero-pedido">—</strong> registrado. Escolha como prefere pagar.</p>
+
+      <div id="pag-escolha">
+        <h3 style="font-family:'Playfair Display',serif;font-size:16px;margin-bottom:12px;">Quanto deseja pagar agora?</h3>
+        <div class="payment-card selected" id="pag-parcela-integral" onclick="selecionarParcelaFinal('integral')">
+          <div class="payment-icon">💯</div>
+          <div>
+            <div class="payment-title">Pagamento integral</div>
+            <div class="payment-desc">100% do valor agora, no ato da reserva.</div>
+          </div>
+        </div>
+        <div class="payment-card" id="pag-parcela-sinal" onclick="selecionarParcelaFinal('sinal')">
+          <div class="payment-icon">🤝</div>
+          <div>
+            <div class="payment-title">Sinal de 50%</div>
+            <div class="payment-desc">Os outros 50% são combinados por WhatsApp, na véspera do evento.</div>
+          </div>
+        </div>
+
+        <h3 style="font-family:'Playfair Display',serif;font-size:16px;margin:20px 0 12px;">Forma de pagamento</h3>
+        <div class="payment-card selected" id="pag-pix" onclick="selecionarFormaPagamentoFinal('pix')">
+          <div class="payment-icon">💸</div>
+          <div>
+            <div class="payment-title">PIX</div>
+            <div class="payment-desc" id="pag-pix-desc">QR Code exibido aqui mesmo, sem sair do site. <strong>3% de desconto no pagamento integral.</strong></div>
+          </div>
+        </div>
+        <div class="payment-card" id="pag-cartao" onclick="selecionarFormaPagamentoFinal('cartao')">
+          <div class="payment-icon">💳</div>
+          <div>
+            <div class="payment-title">Cartão de Crédito</div>
+            <div class="payment-desc">Você será direcionado para a página segura de pagamento. Parcelamento disponível na página do cartão.</div>
+          </div>
+        </div>
+
+        <div class="total-final" style="margin-top:16px;">
+          <span class="label">Valor a pagar agora</span>
+          <span class="value" id="pag-valor-final">R$ 0,00</span>
+        </div>
+
+        <div class="btn-row" style="margin-top:20px;">
+          <button class="btn-secondary" onclick="goToStep(7)">← Voltar</button>
+          <button class="btn-primary" id="pag-btn-confirmar" onclick="confirmarPagamento()">Continuar →</button>
+        </div>
+      </div>
+
+      <div id="pag-carregando" style="display:none;text-align:center;padding:30px 0;">
+        <p>Gerando sua cobrança, aguarde um instante…</p>
+      </div>
+
+      <div id="pag-erro" class="form-error" style="display:none;text-align:center;margin-top:16px;"></div>
+
+      <!-- Modal do PIX — fica dentro do próprio site, sem redirecionar -->
+      <div id="pag-pix-resultado" style="display:none;text-align:center;padding:10px 0;">
+        <p style="margin-bottom:12px;">Escaneie o QR Code no app do seu banco, ou copie o código abaixo:</p>
+        <img id="pag-pix-qrcode" src="" alt="QR Code PIX" style="max-width:260px;width:100%;border:1px solid var(--border);border-radius:8px;">
+        <div style="margin:16px 0;">
+          <textarea id="pag-pix-copiaecola" readonly style="width:100%;min-height:70px;font-size:12px;padding:8px;border-radius:6px;border:1px solid var(--border);"></textarea>
+        </div>
+        <button class="btn-secondary" onclick="copiarPixCopiaECola()">📋 Copiar código PIX</button>
+        <p style="font-size:12px;color:var(--muted);margin-top:16px;">Assim que o pagamento for confirmado, você recebe a confirmação automaticamente.</p>
+        <div class="btn-row" style="justify-content:center;margin-top:16px;">
+          <button class="btn-primary" onclick="irParaConfirmacaoFinal()">Já paguei / Continuar →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ETAPA 9 (div step9): Confirmação final -->
+  <div id="step9" class="step-content" style="display:none;">
+    <div class="card" style="text-align:center;">
+      <h2 class="card-title">Pedido Confirmado! 🎉</h2>
+      <div class="summary-section" style="text-align:center;">
+        <div class="summary-section-title" style="justify-content:center;">Número do Pedido</div>
+        <div style="font-size:22px;font-weight:700;letter-spacing:1px;color:var(--gold);margin-top:4px;" id="conf-numero-pedido">—</div>
+      </div>
+      <p style="margin:18px 0;">Seu pedido está registrado. Assim que o pagamento for confirmado, você recebe a confirmação por e-mail automaticamente.</p>
+      <p style="color:var(--muted);font-size:13px;">Guarde o número do pedido — se precisar falar com a gente, é só nos chamar no WhatsApp.</p>
+      <div class="btn-row" style="justify-content:center;margin-top:20px;">
+        <a href="https://wa.me/5521973635340" target="_blank" class="btn-whatsapp">Falar no WhatsApp</a>
+      </div>
     </div>
   </div>
 
@@ -2113,6 +2222,94 @@ function validarBairro(bairro) {
 }
 
 // ============================================================
+//  DATAS DE ALTA DEMANDA (bloqueio de pagamento online)
+//  Mesma técnica da aba Bairros (gviz), mesma planilha, aba "Datas".
+//  Colunas: Data | Pagamento Bloqueado | Motivo (opcional).
+//  IMPORTANTE: ao contrário de Bairros, aba vazia é o estado NORMAL
+//  (a maior parte do ano não tem nenhuma data bloqueada) — por isso
+//  NÃO reaproveitamos a checagem ">5 linhas" do carregarBairros().
+// ============================================================
+var datasBloqueadasData = null; // null = carregando | objeto = ok | 'ERRO' = falhou
+
+function carregarDatas() {
+  if (!PLANILHA_BAIRROS_URL || PLANILHA_BAIRROS_URL.indexOf('http') !== 0) {
+    datasBloqueadasData = {};
+    return;
+  }
+  var info = extrairChaveGid(PLANILHA_BAIRROS_URL);
+  if (!info) { datasBloqueadasData = 'ERRO'; return; }
+
+  window.gvizCallbackDatas = function(resp) {
+    try {
+      if (!resp || !resp.table) throw new Error('Resposta sem dados');
+      datasBloqueadasData = parseGvizDatas(resp.table);
+      console.log('[Datas] ✓ Carregadas: ' + Object.keys(datasBloqueadasData).length + ' data(s) bloqueada(s).');
+    } catch (err) {
+      console.warn('[Datas] Erro ao processar resposta:', err);
+      datasBloqueadasData = 'ERRO';
+    }
+  };
+
+  var url = 'https://docs.google.com/spreadsheets/d/' + info.chave +
+            '/gviz/tq?sheet=Datas' +
+            '&tqx=responseHandler:gvizCallbackDatas&headers=1';
+
+  var script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() {
+    console.warn('[Datas] ✗ Falha ao carregar.');
+    datasBloqueadasData = 'ERRO';
+  };
+  document.head.appendChild(script);
+}
+
+// Converte a tabela do gviz em { 'dd/mm/aaaa': true }  (só entra a data BLOQUEADA)
+function parseGvizDatas(table) {
+  var result = {};
+  var rows = table.rows || [];
+  var colData = 0, colBloqueado = 1;
+  if (table.cols && table.cols.length) {
+    for (var c = 0; c < table.cols.length; c++) {
+      var label = (table.cols[c].label || '').toLowerCase();
+      if (label.indexOf('data') >= 0 && label.indexOf('bloque') < 0) colData = c;
+      else if (label.indexOf('bloque') >= 0) colBloqueado = c;
+    }
+  }
+  for (var i = 0; i < rows.length; i++) {
+    var cells = rows[i].c;
+    if (!cells || !cells[colData] || cells[colData].v == null) continue;
+    var dataStr = String(cells[colData].v).trim();
+    var bloqueadoRaw = cells[colBloqueado] && cells[colBloqueado].v != null ? String(cells[colBloqueado].v).trim().toLowerCase() : '';
+    if (bloqueadoRaw.charAt(0) === 's') result[dataStr] = true;
+  }
+  return result;
+}
+
+// Recebe uma data no formato do <input type="date"> (yyyy-mm-dd) e devolve
+// true se essa data estiver bloqueada para pagamento na aba "Datas".
+// Enquanto a planilha ainda está carregando, ou se falhou, NÃO bloqueia
+// (fail-safe: prefere deixar pagar a travar o site por causa de uma falha
+// de rede — o pior caso é o pedido cair no fluxo antigo por engano, o que
+// é seguro; o oposto, travar todo mundo por uma falha de rede, não é).
+function dataDePagamentoBloqueada(isoDate) {
+  if (datasBloqueadasData === 'ERRO' || !datasBloqueadasData) return false;
+
+  // Interruptor geral: uma linha na aba "Datas" com Data = "TODAS" e
+  // Pagamento Bloqueado = SIM bloqueia o pagamento online pra QUALQUER
+  // data, sem precisar listar uma por uma. Útil pra desligar o pagamento
+  // do site inteiro rapidamente (ex.: durante testes, ou se precisar
+  // pausar por algum motivo) — só mudar essa uma célula pra NAO liga tudo
+  // de volta, sem precisar mexer em código.
+  if (datasBloqueadasData['TODAS']) return true;
+
+  if (!isoDate) return false;
+  var partes = isoDate.split('-'); // yyyy-mm-dd
+  if (partes.length !== 3) return false;
+  var dataBR = partes[2] + '/' + partes[1] + '/' + partes[0];
+  return !!datasBloqueadasData[dataBR];
+}
+
+// ============================================================
 //  AGE GATE
 // ============================================================
 function confirmAge(isAdult) {
@@ -2201,6 +2398,31 @@ function calcFreeCups() {
     else others += qty;
   }
   return others + Math.floor(total10 / 2);
+}
+
+// Barril de 10L ou 20L de qualquer chope (menos a Pilsen, que só tem 30L/50L)
+// força o modelo antigo (sem pagamento online) — item sujeito a falta de
+// estoque, prefere confirmar pessoalmente antes de liberar o pagamento.
+function pedidoTemBarrilPequeno() {
+  for (var i = 0; i < BEER_CATALOG.length; i++) {
+    var beer = BEER_CATALOG[i];
+    for (var j = 0; j < beer.sizes.length; j++) {
+      var sz = beer.sizes[j];
+      if (sz.l !== 10 && sz.l !== 20) continue;
+      var qty = order.beers[beer.id + '_' + sz.l] || 0;
+      if (qty > 0) return true;
+    }
+  }
+  return false;
+}
+
+// Pagamento só é oferecido quando NENHuma das duas condições de bloqueio
+// se aplica: data de alta demanda, OU barril de 10/20L no carrinho.
+// Qualquer uma das duas, sozinha, já joga pro modelo antigo.
+function pagamentoOnlineDisponivel() {
+  if (pedidoTemBarrilPequeno()) return false;
+  if (dataDePagamentoBloqueada(order.eventDate)) return false;
+  return true;
 }
 
 function calcTotalLiters() {
@@ -3030,7 +3252,15 @@ function goToStep6() {
   order.nomeOutra = document.getElementById('nomeOutra').value;
   order.telOutra = document.getElementById('telOutra').value;
   order.observacoes = document.getElementById('observacoes').value;
-  goToStep(6);
+
+  // Liberado: pula a etapa antiga de "Pagamento" (escolha informativa) e vai
+  // direto pro Resumo — a forma de pagamento real é escolhida DEPOIS, na
+  // Etapa 8, só depois do aceite do Termo.
+  if (pagamentoOnlineDisponivel()) {
+    goToResumo();
+  } else {
+    goToStep(6);
+  }
 }
 
 // ============================================================
@@ -3047,6 +3277,19 @@ function selectPagamento(tipo) {
 // ============================================================
 function goToResumo() {
   buildResumo();
+  var liberado = pagamentoOnlineDisponivel();
+  var blocoBloqueado = document.getElementById('resumo-acoes-bloqueado');
+  var blocoLiberado  = document.getElementById('resumo-acoes-liberado');
+  if (blocoBloqueado) blocoBloqueado.style.display = liberado ? 'none' : 'block';
+  if (blocoLiberado)  blocoLiberado.style.display  = liberado ? 'block' : 'none';
+
+  // No fluxo liberado, PIX/Cartão só é escolhido DEPOIS do Resumo (Etapa 8)
+  // — não mostra uma forma "pré-selecionada" que o cliente ainda nem viu.
+  if (liberado) {
+    var pagEl = document.getElementById('resumo-pagamento');
+    if (pagEl) pagEl.innerHTML = resumoItem('Forma de Pagamento', 'A escolher na próxima etapa');
+  }
+
   goToStep(7);
 }
 
@@ -3506,6 +3749,155 @@ function registrarPedido(origem) {
   }
 }
 
+// ============================================================
+//  BOTÃO "PAGAR" (Etapa 7 → Etapa 8, fluxo liberado)
+//  Ao aceitar o Termo, grava o pedido na planilha com status 'pendente'
+//  — o MESMO registro que já acontece hoje ao baixar PDF/Imagem ou
+//  confirmar no WhatsApp (reaproveita registrarPedido(), idempotente).
+//  Isso garante que, mesmo que o cliente feche a janela sem pagar (ou
+//  Bernardo precise abrir uma exceção/desconto manual), o pedido já
+//  está na planilha — a cobrança manual pelo WhatsApp continua possível
+//  a qualquer momento, independente do pagamento online.
+// ============================================================
+function cliqueEmPagar() {
+  if (!mcTermoRequerido('pagar')) return; // abre o modal do Termo se ainda não aceito
+  iniciarFluxoPagamento();
+}
+
+function iniciarFluxoPagamento() {
+  registrarPedido('pagamento'); // grava 'pendente' na planilha (idempotente)
+
+  // Reseta a Etapa 8 pro estado inicial (escolha de forma), caso o cliente
+  // volte e avance de novo.
+  var numEl = document.getElementById('pag-numero-pedido');
+  if (numEl) numEl.textContent = order.numeroPedido || '—';
+  document.getElementById('pag-escolha').style.display = 'block';
+  document.getElementById('pag-carregando').style.display = 'none';
+  document.getElementById('pag-pix-resultado').style.display = 'none';
+  document.getElementById('pag-erro').style.display = 'none';
+  mcParcelaFinal = 'integral';
+  mcFormaPagamentoFinal = 'pix';
+  atualizarValorPagamentoFinal();
+
+  goToStep(8);
+}
+
+var mcFormaPagamentoFinal = 'pix';
+var mcParcelaFinal = 'integral'; // 'integral' | 'sinal'
+var MC_DESCONTO_PIX_INTEGRAL = 0.03; // 3% — só no PIX pago 100% de uma vez
+
+function selecionarFormaPagamentoFinal(tipo) {
+  mcFormaPagamentoFinal = tipo;
+  ['pag-pix', 'pag-cartao'].forEach(function(id) {
+    document.getElementById(id).classList.remove('selected');
+  });
+  document.getElementById('pag-' + tipo).classList.add('selected');
+  atualizarValorPagamentoFinal();
+}
+
+function selecionarParcelaFinal(tipo) {
+  mcParcelaFinal = tipo;
+  ['pag-parcela-integral', 'pag-parcela-sinal'].forEach(function(id) {
+    document.getElementById(id).classList.remove('selected');
+  });
+  document.getElementById('pag-parcela-' + tipo).classList.add('selected');
+  atualizarValorPagamentoFinal();
+}
+
+// Devolve o valor exato a cobrar AGORA, já considerando sinal (50%) e o
+// desconto do PIX (3%, só quando integral — não se aplica ao sinal).
+function calcularValorPagamentoFinal() {
+  var total = calcTotal();
+  var base = (mcParcelaFinal === 'sinal') ? (total * 0.5) : total;
+  if (mcFormaPagamentoFinal === 'pix' && mcParcelaFinal === 'integral') {
+    base = base * (1 - MC_DESCONTO_PIX_INTEGRAL);
+  }
+  return Math.round(base * 100) / 100; // 2 casas, sem sobra de ponto flutuante
+}
+
+function atualizarValorPagamentoFinal() {
+  var el = document.getElementById('pag-valor-final');
+  if (el) el.textContent = fmt(calcularValorPagamentoFinal());
+  var descPix = document.getElementById('pag-pix-desc');
+  if (descPix) {
+    descPix.innerHTML = (mcParcelaFinal === 'integral')
+      ? 'QR Code exibido aqui mesmo, sem sair do site. <strong>3% de desconto no pagamento integral.</strong>'
+      : 'QR Code exibido aqui mesmo, sem sair do site. O desconto de 3% vale só no pagamento integral.';
+  }
+}
+
+// Chama a ação 'criar_cobranca' do Apps Script (mesmo backend do mcTrack,
+// URL/chave já configuradas) — cria cliente + cobrança no Asaas e devolve
+// o QR Code do PIX (fica no site) ou o link da fatura do cartão (redireciona,
+// exigido por conformidade PCI-DSS — o cliente digita o cartão numa página
+// hospedada pelo próprio processador, nunca no nosso site estático).
+function confirmarPagamento() {
+  var erroEl = document.getElementById('pag-erro');
+  erroEl.style.display = 'none';
+
+  document.getElementById('pag-escolha').style.display = 'none';
+  document.getElementById('pag-carregando').style.display = 'block';
+
+  var payload = {
+    chave: MC_TRACK_CHAVE,
+    acao: 'criar_cobranca',
+    dados: {
+      nome: order.nome || '',
+      cpfCnpj: order.documento || '',
+      email: order.email || '',
+      telefone: order.telefone || '',
+      valor: calcularValorPagamentoFinal(),
+      numeroPedido: order.numeroPedido || '',
+      formaPagamento: mcFormaPagamentoFinal
+    }
+  };
+
+  fetch(MC_TRACK_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+      if (!resp || !resp.ok) throw new Error((resp && resp.erro) || 'Falha ao gerar a cobrança.');
+
+      if (resp.tipo === 'pix') {
+        document.getElementById('pag-carregando').style.display = 'none';
+        document.getElementById('pag-pix-qrcode').src = 'data:image/png;base64,' + resp.qrCodeBase64;
+        document.getElementById('pag-pix-copiaecola').value = resp.copiaECola || '';
+        document.getElementById('pag-pix-resultado').style.display = 'block';
+      } else if (resp.tipo === 'cartao' && resp.invoiceUrl) {
+        // Cartão: redireciona pra página segura hospedada pelo Asaas.
+        window.location.href = resp.invoiceUrl;
+      } else {
+        throw new Error('Resposta inesperada do servidor.');
+      }
+    })
+    .catch(function(err) {
+      document.getElementById('pag-carregando').style.display = 'none';
+      document.getElementById('pag-escolha').style.display = 'block';
+      erroEl.textContent = 'Não foi possível gerar a cobrança agora. Tente novamente, ou fale com a gente no WhatsApp. (' + err.message + ')';
+      erroEl.style.display = 'block';
+    });
+}
+
+function irParaConfirmacaoFinal() {
+  var confEl = document.getElementById('conf-numero-pedido');
+  if (confEl) confEl.textContent = order.numeroPedido || '—';
+  goToStep(9);
+}
+
+function copiarPixCopiaECola() {
+  var el = document.getElementById('pag-pix-copiaecola');
+  el.select();
+  el.setSelectionRange(0, 99999);
+  try {
+    navigator.clipboard.writeText(el.value);
+  } catch (e) {
+    document.execCommand('copy');
+  }
+}
+
 function sendWhatsapp() {
   if (!mcTermoRequerido('whatsapp')) return;  // exige aceite do Termo
   // Gera o numero (se preciso), grava na planilha e dispara a conversao.
@@ -3623,6 +4015,7 @@ function mcAceitarTermo() {
   if (acao === 'whatsapp')    sendWhatsapp();
   else if (acao === 'pdf')    baixarComprovantePDF();
   else if (acao === 'imagem') baixarComprovanteImagem();
+  else if (acao === 'pagar')  iniciarFluxoPagamento();
 }
 
 // Escreve o selo do aceite no comprovante (entra no PDF e na imagem)
@@ -3646,20 +4039,32 @@ function mcAtualizarSeloTermo() {
 // Ordem de exibição das etapas (os ids das divs seguem a numeração antiga):
 //   3 = Barris | 2 = Endereço | 1 = Chopeira | 4 = Data & Entrega
 //   5 = Seus Dados | 6 = Pagamento | 7 = Resumo
+// ETAPA 8 e 9 só existem no fluxo com pagamento online liberado:
+//   8 = Pagamento (real, PIX/Cartão via Asaas) — vem DEPOIS do Resumo
+//   9 = Confirmação ("Pedido registrado, aguardando confirmação do pagamento")
+// A etapa 6 antiga ("Pagamento" — só escolha informativa, sem cobrança real)
+// só é usada no fluxo bloqueado (data de alta demanda / barril 10-20L),
+// exatamente como funcionava antes desta mudança.
 var MC_STEP_LABELS = {
   3: 'Barris', 2: 'Endereço', 1: 'Chopeira', 4: 'Data & Entrega',
-  5: 'Seus Dados', 6: 'Pagamento', 7: 'Resumo'
+  5: 'Seus Dados', 6: 'Pagamento', 7: 'Resumo',
+  8: 'Pagamento', 9: 'Confirmação'
 };
-var MC_SEQ_KIT    = [3, 2, 1, 4, 5, 6, 7];  // com chopeira
-var MC_SEQ_BARRIS = [3, 2, 4, 5, 6, 7];     // "já tenho os equipamentos"
+var MC_SEQ_KIT_BLOQUEADO    = [3, 2, 1, 4, 5, 6, 7];       // igual ao fluxo original
+var MC_SEQ_BARRIS_BLOQUEADO = [3, 2, 4, 5, 6, 7];
+var MC_SEQ_KIT_LIBERADO     = [3, 2, 1, 4, 5, 7, 8, 9];    // Resumo → Pagamento real → Confirmação
+var MC_SEQ_BARRIS_LIBERADO  = [3, 2, 4, 5, 7, 8, 9];
 var mcCurrentStep = 3;
 
 function mcSeq() {
-  return (order.service === 'barris') ? MC_SEQ_BARRIS : MC_SEQ_KIT;
+  var comChopeira = order.service !== 'barris';
+  var liberado = pagamentoOnlineDisponivel();
+  if (liberado) return comChopeira ? MC_SEQ_KIT_LIBERADO : MC_SEQ_BARRIS_LIBERADO;
+  return comChopeira ? MC_SEQ_KIT_BLOQUEADO : MC_SEQ_BARRIS_BLOQUEADO;
 }
 
 function goToStep(n) {
-  for (var i = 1; i <= 7; i++) {
+  for (var i = 1; i <= 9; i++) {
     var sEl = document.getElementById('step' + i);
     if (sEl) sEl.style.display = (i === n) ? 'block' : 'none';
   }
@@ -3672,7 +4077,7 @@ function renderProgress(current) {
   var seq   = mcSeq();
   var total = seq.length;
 
-  for (var i = 1; i <= 7; i++) {
+  for (var i = 1; i <= 8; i++) {
     var dot = document.getElementById('prog' + i);
     if (!dot) continue;
     if (i > total) { dot.style.display = 'none'; continue; }
@@ -3887,6 +4292,7 @@ function initConsentimento() {
   selectPagamento('pix');
   selectTipoCadastro('cpf');
   carregarBairros();
+  carregarDatas();
   var __termoCorpo = document.getElementById('termoCorpo');
   if (__termoCorpo) __termoCorpo.addEventListener('scroll', mcTermoScroll);
   selectService('kit');      // padrão: chope + chopeira inclusa
