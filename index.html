@@ -3906,6 +3906,13 @@ function irParaConfirmacaoFinal() {
   var confEl = document.getElementById('conf-numero-pedido');
   if (confEl) confEl.textContent = order.numeroPedido || '—';
   goToStep(9);
+
+  // Ao clicar "Já paguei", além de mostrar a confirmação na tela, já manda
+  // o cliente pro WhatsApp avisando que pagou — mesmo padrão do successUrl
+  // do checkout de cartão (ver Pagamentos.gs, asCriarCheckoutCartao_).
+  var msgPix = 'Acabei de finalizar meu pagamento do Pedido ' + (order.numeroPedido || '') + '.';
+  var urlPix = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(msgPix);
+  window.open(urlPix, '_blank');
 }
 
 function copiarPixCopiaECola() {
