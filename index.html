@@ -3789,6 +3789,7 @@ var MC_DESCONTO_PIX_INTEGRAL = 0.03; // 3% — só no PIX pago 100% de uma vez
 
 function selecionarFormaPagamentoFinal(tipo) {
   mcFormaPagamentoFinal = tipo;
+  order.pagamento = tipo; // mantém consistente com o resto do site, que ainda lê essa variável
   ['pag-pix', 'pag-cartao'].forEach(function(id) {
     document.getElementById(id).classList.remove('selected');
   });
