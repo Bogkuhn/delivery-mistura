@@ -1741,7 +1741,7 @@
           <div class="payment-icon">💳</div>
           <div>
             <div class="payment-title">Cartão de Crédito</div>
-            <div class="payment-desc">Você será direcionado para a página segura de pagamento. Parcelamento disponível na página do cartão.</div>
+            <div class="payment-desc">Você será direcionado para a página segura de pagamento. Parcelamento disponível na página do cartão. <strong>Requer nome completo e e-mail válido.</strong></div>
           </div>
         </div>
 
@@ -3834,6 +3834,20 @@ function atualizarValorPagamentoFinal() {
 function confirmarPagamento() {
   var erroEl = document.getElementById('pag-erro');
   erroEl.style.display = 'none';
+
+  // O checkout de CARTÃO da Asaas exige e-mail e nome completo do titular —
+  // ao contrário do resto do site, onde e-mail é opcional. Valida só aqui,
+  // no momento de escolher Cartão, em vez de travar o fluxo inteiro pra
+  // quem vai pagar PIX ou usar o WhatsApp.
+  if (mcFormaPagamentoFinal === 'cartao') {
+    var emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((order.email || '').trim());
+    var nomeCompleto = (order.nome || '').trim().split(/\s+/).length >= 2;
+    if (!emailValido || !nomeCompleto) {
+      erroEl.textContent = 'Pra pagar com cartão, precisamos do seu nome completo e um e-mail válido. Volte e complete "Seus Dados" antes de continuar.';
+      erroEl.style.display = 'block';
+      return;
+    }
+  }
 
   document.getElementById('pag-escolha').style.display = 'none';
   document.getElementById('pag-carregando').style.display = 'block';
