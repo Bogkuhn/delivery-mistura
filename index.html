@@ -3846,6 +3846,10 @@ function confirmarPagamento() {
       cpfCnpj: order.documento || '',
       email: order.email || '',
       telefone: order.telefone || '',
+      endereco: order.logradouro || '',
+      numero: order.numero || '',
+      cep: order.cep || '',
+      bairro: order.bairro || '',
       valor: calcularValorPagamentoFinal(),
       numeroPedido: order.numeroPedido || '',
       formaPagamento: mcFormaPagamentoFinal
