@@ -3776,9 +3776,14 @@ function iniciarFluxoPagamento() {
   document.getElementById('pag-carregando').style.display = 'none';
   document.getElementById('pag-pix-resultado').style.display = 'none';
   document.getElementById('pag-erro').style.display = 'none';
-  mcParcelaFinal = 'integral';
-  mcFormaPagamentoFinal = 'pix';
-  atualizarValorPagamentoFinal();
+  // Reseta forma de pagamento e parcela pro padrão (PIX / integral) — usando
+  // as próprias funções de seleção, não só as variáveis, senão a marcação
+  // visual (classe "selected" nos cartões) fica dessincronizada da variável
+  // quando o cliente volta pra corrigir algo (ex.: e-mail) e retorna pra cá:
+  // o cartão continuava mostrando "Cartão" marcado, mas o valor calculado
+  // já tinha voltado a usar PIX por baixo.
+  selecionarParcelaFinal('integral');
+  selecionarFormaPagamentoFinal('pix');
 
   goToStep(8);
 }
