@@ -1578,7 +1578,7 @@
         <div class="payment-icon">💸</div>
         <div>
           <div class="payment-title">PIX</div>
-          <div class="payment-desc">Transferência instantânea. <strong>3% de desconto</strong> para pagamento integral no dia da reserva.</div>
+          <div class="payment-desc">Transferência instantânea. <strong>4% de desconto</strong> para pagamento integral no dia da reserva.</div>
         </div>
       </div>
 
@@ -1928,7 +1928,7 @@
       <div class="mc-termo-hint" id="termoHint">
         ⬆️ Role o texto acima até o final para habilitar o aceite.
       </div>
-      <label class="mc-termo-check" for="termoCheck">
+      <label class="mc-termo-check">
         <input type="checkbox" id="termoCheck" disabled onchange="mcTermoCheckChange(this)">
         <span>Declaro ser maior de 18 anos, que li e compreendi integralmente o Termo de
           Responsabilidade acima e que aceito todas as suas condições, assumindo a
@@ -3977,7 +3977,12 @@ function mcAbrirTermo(acao) {
   var corpo = document.getElementById('termoCorpo');
   if (chk) { chk.checked = false; chk.disabled = true; }
   if (btn) btn.disabled = true;
-  if (hint) hint.classList.remove('oculto');
+  if (hint) {
+    hint.classList.remove('oculto');
+    // Restaura o texto padrão — mcAceitarTermo pode ter trocado por um
+    // aviso de erro numa tentativa anterior.
+    hint.textContent = '⬆️ Role o texto acima até o final para habilitar o aceite.';
+  }
   ov.classList.add('show');
   document.body.style.overflow = 'hidden';
   if (corpo) {
@@ -4008,6 +4013,14 @@ function mcTermoScroll() {
   }
 }
 
+// Habilita/desabilita o botão conforme o checkbox.
+// NOTA (iOS): o <label> que envolve esse checkbox NÃO pode ter o atributo
+// for="termoCheck" apontando pro próprio input que ele já contém — esse
+// padrão dispara um bug do WebKit/iOS que ativa o checkbox DUAS vezes no
+// mesmo toque (marca e desmarca), deixando o cliente preso no modal sem
+// conseguir aceitar. Relatado por cliente em iPhone (14/09/2026). A
+// associação implícita (input dentro do label) já basta e funciona em
+// todos os navegadores.
 function mcTermoCheckChange(cb) {
   var btn = document.getElementById('termoBtnAceitar');
   if (btn) btn.disabled = !cb.checked;
@@ -4015,7 +4028,19 @@ function mcTermoCheckChange(cb) {
 
 function mcAceitarTermo() {
   var chk = document.getElementById('termoCheck');
-  if (!chk || !chk.checked) return;
+  // Se por qualquer motivo o checkbox não estiver marcado, NÃO sai em
+  // silêncio (era o comportamento antigo: o clique simplesmente não fazia
+  // nada, e o cliente ficava preso no modal sem entender o porquê — foi
+  // exatamente assim que o bug do <label for> no iOS se manifestou, ver
+  // comentário em mcTermoCheckChange). Avisa na tela.
+  if (!chk || !chk.checked) {
+    var hintErro = document.getElementById('termoHint');
+    if (hintErro) {
+      hintErro.classList.remove('oculto');
+      hintErro.textContent = '⚠️ Marque a caixa de aceite acima para continuar.';
+    }
+    return;
+  }
 
   var d = new Date();
   var p = function (n) { return String(n).padStart(2, '0'); };
