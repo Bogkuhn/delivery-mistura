@@ -1052,7 +1052,7 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn-secondary" onclick="goToStep(3)">← Voltar</button>
+        <button class="btn-secondary" onclick="goToStep(4)">← Voltar</button>
         <button class="btn-primary" onclick="goToStep3()">Continuar →</button>
       </div>
     </div>
@@ -1509,7 +1509,7 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn-secondary" onclick="goToStep(order.service === 'barris' ? 2 : 1)">← Voltar</button>
+        <button class="btn-secondary" onclick="goToStep(3)">← Voltar</button>
         <button class="btn-primary" onclick="goToStep5()">Continuar →</button>
       </div>
     </div>
@@ -1600,7 +1600,7 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn-secondary" onclick="goToStep(4)">← Voltar</button>
+        <button class="btn-secondary" onclick="goToStep(order.service === 'barris' ? 2 : 1)">← Voltar</button>
         <button class="btn-primary" onclick="goToStep6()">Continuar →</button>
       </div>
     </div>
@@ -2209,37 +2209,95 @@ function carregarBairros() {
   document.head.appendChild(script);
 }
 
-// Converte a tabela do gviz em { bairro: {atende, frete} }
-function parseGvizTable(table) {
-  var result = {};
-  var rows = table.rows;
-  // Detecta as colunas pelos rótulos (cabeçalho) ou usa posições padrão 0,1,2,3
-  var colBairro = 0, colAtende = 2, colFrete = 3;
-  if (table.cols && table.cols.length) {
-    for (var c = 0; c < table.cols.length; c++) {
-      var label = (table.cols[c].label || '').toLowerCase();
-      if (label.indexOf('bairro') >= 0) colBairro = c;
-      else if (label.indexOf('atende') >= 0) colAtende = c;
-      else if (label.indexOf('frete') >= 0) colFrete = c;
+// Normaliza texto para comparação: sem acento, espaços colapsados, minúsculo.
+function mcNorm(v) {
+  return String(v == null ? '' : v).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+// Descobre os nomes das colunas de uma aba lida pelo gviz. O cabeçalho pode
+// vir nos rótulos (quando está na 1ª linha) ou numa linha de dados (aba
+// Bairros: título e instruções ocupam as linhas 1-2, cabeçalho na linha 3).
+// Devolve { nomes: [...], inicio: índice da 1ª linha de dados } ou null.
+function mcCabecalhoGviz(table, palavraChave) {
+  var cols = table.cols || [];
+  var labels = cols.map(function(c) { return mcNorm(c && c.label); });
+  if (labels.some(function(l) { return l.indexOf(palavraChave) >= 0; })) {
+    return { nomes: labels, inicio: 0 };
+  }
+  var rows = table.rows || [];
+  for (var i = 0; i < Math.min(rows.length, 10); i++) {
+    var cells = rows[i].c || [];
+    var nomes = cells.map(function(c) { return mcNorm(c && c.v); });
+    if (nomes.some(function(n) { return n.indexOf(palavraChave) === 0; })) {
+      return { nomes: nomes, inicio: i + 1 };
     }
   }
-  for (var i = 0; i < rows.length; i++) {
+  return null;
+}
+
+// Converte a aba Bairros em
+//   { bairro: {atende, frete, fretes: {nome_coluna: valor|null}, regiao} }
+// "frete" = 1ª coluna de frete (o frete padrão). Colunas de frete extras
+// (ex.: "FRETE DEZEMBRO") ficam em "fretes" e são escolhidas pela aba
+// Calendario (ação TABELA). Célula vazia numa coluna extra = usa o padrão.
+function parseGvizTable(table) {
+  var result = {};
+  var rows = table.rows || [];
+  var colBairro = 0, colRegiao = 1, colAtende = 2, colsFrete = [{ idx: 3, nome: 'frete' }];
+  var inicio = 0;
+
+  var cab = mcCabecalhoGviz(table, 'bairro');
+  if (cab) {
+    inicio = cab.inicio;
+    var achou = {}, fretes = [];
+    for (var c = 0; c < cab.nomes.length; c++) {
+      var n = cab.nomes[c];
+      if (!n) continue;
+      if (!achou.bairro && n.indexOf('bairro') >= 0) { colBairro = c; achou.bairro = true; }
+      else if (!achou.regiao && n.indexOf('regiao') >= 0) { colRegiao = c; achou.regiao = true; }
+      else if (!achou.atende && n.indexOf('atende') >= 0) { colAtende = c; achou.atende = true; }
+      else if (n.indexOf('frete') >= 0) fretes.push({ idx: c, nome: n });
+    }
+    if (fretes.length) colsFrete = fretes;
+  }
+
+  function num(cell) {
+    if (!cell || cell.v == null || cell.v === '') return null;
+    if (typeof cell.v === 'number') return cell.v;
+    var s = String(cell.v).replace(/[^\d.,]/g, '');
+    if (!s) return null;
+    if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.');
+    var x = parseFloat(s);
+    return isNaN(x) ? null : x;
+  }
+
+  for (var i = inicio; i < rows.length; i++) {
     var cells = rows[i].c;
     if (!cells || !cells[colBairro] || cells[colBairro].v == null) continue;
     var bairro = String(cells[colBairro].v).trim().toLowerCase();
     if (!bairro || bairro === 'bairro') continue;
     var atendeRaw = cells[colAtende] && cells[colAtende].v != null ? String(cells[colAtende].v).trim().toLowerCase() : '';
-    var atende = atendeRaw.charAt(0) === 's';
-    var freteRaw = cells[colFrete] && cells[colFrete].v != null ? cells[colFrete].v : 0;
-    var frete = typeof freteRaw === 'number' ? freteRaw : (parseFloat(String(freteRaw).replace(/[^\d.,]/g,'').replace(',','.')) || 0);
-    result[bairro] = { atende: atende, frete: frete };
+    var fretes = {};
+    colsFrete.forEach(function(cf) { fretes[cf.nome] = num(cells[cf.idx]); });
+    var entrada = {
+      atende: atendeRaw.charAt(0) === 's',
+      frete: fretes[colsFrete[0].nome] || 0,
+      fretes: fretes,
+      regiao: mcNorm(cells[colRegiao] && cells[colRegiao].v),
+      chave: mcNorm(bairro)
+    };
+    result[bairro] = entrada;
     var noAccent = bairro.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    if (noAccent !== bairro) result[noAccent] = { atende: atende, frete: frete };
+    if (noAccent !== bairro) result[noAccent] = entrada;
   }
   return result;
 }
 
-function validarBairro(bairro) {
+// Valida o bairro NA DATA do evento (isoDate = yyyy-mm-dd, opcional).
+// Aplica as regras da aba Calendario: bloqueio de região/bairro na data e
+// troca da coluna de frete (ex.: frete de dezembro).
+function validarBairro(bairro, isoDate) {
   // URL não configurada — validação desativada
   if (!PLANILHA_BAIRROS_URL || PLANILHA_BAIRROS_URL.indexOf('http') !== 0) {
     return { ok: true, frete: 0, aviso: null };
@@ -2248,8 +2306,8 @@ function validarBairro(bairro) {
   if (bairrosData === 'ERRO') {
     return { ok: true, frete: 0, aviso: 'erro_carga' };
   }
-  // Ainda carregando
-  if (!bairrosData) {
+  // Ainda carregando (bairros, ou o calendário quando já há data escolhida)
+  if (!bairrosData || (isoDate && calendarioData === null)) {
     return { ok: false, frete: 0, aviso: 'carregando' };
   }
   var key   = bairro.toLowerCase().trim();
@@ -2257,7 +2315,181 @@ function validarBairro(bairro) {
   var entry = bairrosData[key] || bairrosData[keySA];
   if (!entry) return { ok: false, frete: 0, aviso: 'nao_cadastrado' };
   if (!entry.atende) return { ok: false, frete: 0, aviso: 'nao_atende' };
-  return { ok: true, frete: entry.frete || 0, aviso: null };
+
+  var frete = entry.frete || 0;
+  if (isoDate) {
+    var regras = mcRegrasDoDia(isoDate, entry);
+    var bloqueio = mcRegraVencedora(regras.filter(function(r) { return r.acao === 'bloquear' || r.acao === 'liberar'; }));
+    if (bloqueio && bloqueio.acao === 'bloquear') {
+      return { ok: false, frete: 0, aviso: 'bloqueado_data' };
+    }
+    var tabela = mcRegraVencedora(regras.filter(function(r) { return r.acao === 'tabela'; }));
+    if (tabela) {
+      var alvoCol = mcNorm(tabela.valor), nomeCol = null;
+      Object.keys(entry.fretes || {}).forEach(function(n) {
+        if (n === alvoCol || (!nomeCol && n.indexOf(alvoCol) >= 0)) nomeCol = n;
+      });
+      if (!nomeCol) {
+        console.warn('[Calendario] Coluna de frete "' + tabela.valor + '" não existe na aba Bairros (linha ' + tabela.linha + ') — usei o frete padrão.');
+      } else if (typeof entry.fretes[nomeCol] === 'number') {
+        frete = entry.fretes[nomeCol];
+      } // célula vazia na coluna extra = frete padrão
+    }
+  }
+  return { ok: true, frete: frete, aviso: null };
+}
+
+// ============================================================
+//  CALENDÁRIO — aba "Calendario" (mesma planilha, gviz)
+//  Regras por data: qual coluna de frete vale (TABELA), bloqueio de
+//  região/bairro (BLOQUEAR) e exceção a um bloqueio (LIBERAR).
+//  Colunas: ATIVO | DATA INÍCIO | DATA FIM | DIAS DA SEMANA |
+//           TIPO DE ALVO | ALVO | AÇÃO | VALOR | OBS
+//  Prioridade: regra de BAIRRO > de REGIÃO > de TODOS; empate = vale a
+//  linha mais abaixo. Bloqueio e tabela de frete são decididos em separado.
+//  Se a aba falhar, o site segue sem regras (frete padrão, sem bloqueio) —
+//  mesmo princípio das outras abas: uma falha de rede nunca trava o site.
+//  O manual completo fica na aba "Manual" da planilha.
+// ============================================================
+var calendarioData = null; // null = carregando | array de regras | 'ERRO'
+
+function carregarCalendario() {
+  if (!PLANILHA_BAIRROS_URL || PLANILHA_BAIRROS_URL.indexOf('http') !== 0) { calendarioData = []; return; }
+  var info = extrairChaveGid(PLANILHA_BAIRROS_URL);
+  if (!info) { calendarioData = 'ERRO'; return; }
+
+  window.gvizCallbackCalendario = function(resp) {
+    try {
+      if (!resp || !resp.table) throw new Error('Resposta sem dados');
+      calendarioData = parseGvizCalendario(resp.table);
+      console.log('[Calendario] ✓ ' + calendarioData.length + ' regra(s) ativa(s).');
+    } catch (err) {
+      console.warn('[Calendario] Erro ao processar — site segue sem regras de data:', err);
+      calendarioData = 'ERRO';
+    }
+    if (typeof mcCurrentStep !== 'undefined' && mcCurrentStep === 2) mcAvaliarBairro(true);
+  };
+
+  var url = 'https://docs.google.com/spreadsheets/d/' + info.chave +
+            '/gviz/tq?sheet=Calendario' +
+            '&tqx=responseHandler:gvizCallbackCalendario&headers=1';
+  var script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() {
+    console.warn('[Calendario] ✗ Falha ao carregar — site segue sem regras de data.');
+    calendarioData = 'ERRO';
+  };
+  document.head.appendChild(script);
+}
+
+// Data de célula do gviz → número aaaammdd (ou null).
+function mcDataCelula(cell) {
+  if (!cell || cell.v == null || cell.v === '') return null;
+  var s = String(cell.v), m;
+  if ((m = s.match(/^Date\((\d{4}),(\d{1,2}),(\d{1,2})/))) return +m[1] * 10000 + (+m[2] + 1) * 100 + +m[3];
+  var f = cell.f ? String(cell.f) : s;
+  if ((m = f.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/))) return +m[3] * 10000 + +m[2] * 100 + +m[1];
+  if ((m = s.match(/(\d{4})-(\d{2})-(\d{2})/))) return +m[1] * 10000 + +m[2] * 100 + +m[3];
+  return null;
+}
+
+var MC_DIAS_SEMANA = { dom: 0, seg: 1, ter: 2, qua: 3, qui: 4, sex: 5, sab: 6 };
+
+function parseGvizCalendario(table) {
+  var cab = mcCabecalhoGviz(table, 'acao');
+  // Se a aba "Calendario" não existir, o Google devolve a 1ª aba da planilha.
+  // Sem cabeçalho de calendário reconhecível = nenhuma regra (nunca adivinha).
+  if (!cab) { console.warn('[Calendario] Aba sem cabeçalho reconhecível (ou inexistente) — nenhuma regra aplicada.'); return []; }
+
+  var papeis = ['ativo', 'inicio', 'fim', 'dias', 'tipo', 'alvo', 'acao', 'valor'];
+  var col = {};
+  cab.nomes.forEach(function(n, c) {
+    if (!n) return;
+    for (var k = 0; k < papeis.length; k++) {
+      var p = papeis[k];
+      if (col[p] == null && n.indexOf(p) >= 0) { col[p] = c; return; }
+    }
+  });
+  if (col.inicio == null || col.acao == null) {
+    console.warn('[Calendario] Faltam as colunas DATA INÍCIO e/ou AÇÃO — nenhuma regra aplicada.');
+    return [];
+  }
+
+  var regras = [], rows = table.rows || [];
+  for (var i = cab.inicio; i < rows.length; i++) {
+    var cells = rows[i].c || [];
+    var get = function(p) { var cc = col[p] != null ? cells[col[p]] : null; return cc && cc.v != null ? cc.v : ''; };
+    var linhaPlanilha = i + 2; // linha na planilha (a 1ª linha é o cabeçalho)
+
+    var acaoRaw = mcNorm(get('acao'));
+    if (!acaoRaw) continue; // linha vazia
+    if (mcNorm(get('ativo')).charAt(0) === 'n') continue;
+
+    var acao = acaoRaw.indexOf('bloq') === 0 ? 'bloquear'
+             : acaoRaw.indexOf('liber') === 0 ? 'liberar'
+             : acaoRaw.indexOf('tab') === 0 ? 'tabela' : null;
+    if (!acao) { console.warn('[Calendario] Linha ' + linhaPlanilha + ': AÇÃO "' + get('acao') + '" desconhecida — ignorada.'); continue; }
+
+    var ini = mcDataCelula(col.inicio != null ? cells[col.inicio] : null);
+    var fim = mcDataCelula(col.fim != null ? cells[col.fim] : null) || ini;
+    if (!ini) { console.warn('[Calendario] Linha ' + linhaPlanilha + ': DATA INÍCIO inválida — ignorada.'); continue; }
+
+    var dias = null;
+    var diasRaw = mcNorm(get('dias'));
+    if (diasRaw) {
+      dias = {};
+      diasRaw.split(/[,;\/\s]+/).forEach(function(t) {
+        var d = MC_DIAS_SEMANA[t.substring(0, 3)];
+        if (d != null) dias[d] = true;
+      });
+    }
+
+    var tipoRaw = mcNorm(get('tipo'));
+    var alvoRaw = mcNorm(get('alvo'));
+    var tipo = tipoRaw.indexOf('bairro') === 0 ? 'bairro'
+             : tipoRaw.indexOf('regi') === 0 ? 'regiao' : 'todos';
+    if (!alvoRaw || alvoRaw === '*' || alvoRaw === 'todos') tipo = 'todos';
+
+    var valor = String(get('valor') || '').trim();
+    if (acao === 'tabela' && !valor) { console.warn('[Calendario] Linha ' + linhaPlanilha + ': TABELA sem VALOR — ignorada.'); continue; }
+
+    regras.push({
+      linha: linhaPlanilha, ordem: regras.length,
+      ini: ini, fim: fim, dias: dias, tipo: tipo,
+      alvos: alvoRaw.split(/\s*[,;]\s*/).filter(Boolean),
+      acao: acao, valor: valor
+    });
+  }
+  return regras;
+}
+
+// Regras que valem para essa data e esse bairro, com a força (especificidade).
+function mcRegrasDoDia(isoDate, entry) {
+  if (!Array.isArray(calendarioData) || !isoDate) return [];
+  var p = isoDate.split('-');
+  if (p.length !== 3) return [];
+  var dataNum = +p[0] * 10000 + +p[1] * 100 + +p[2];
+  var diaSemana = new Date(+p[0], +p[1] - 1, +p[2]).getDay();
+  var out = [];
+  calendarioData.forEach(function(r) {
+    if (dataNum < r.ini || dataNum > r.fim) return;
+    if (r.dias && !r.dias[diaSemana]) return;
+    var forca = 0;
+    if (r.tipo === 'todos') forca = 1;
+    else if (r.tipo === 'regiao' && entry.regiao && r.alvos.indexOf(entry.regiao) >= 0) forca = 2;
+    else if (r.tipo === 'bairro' && r.alvos.indexOf(entry.chave) >= 0) forca = 3;
+    if (forca) out.push({ acao: r.acao, valor: r.valor, linha: r.linha, ordem: r.ordem, forca: forca });
+  });
+  return out;
+}
+
+// Mais específica vence; empate = a que está mais abaixo na planilha.
+function mcRegraVencedora(lista) {
+  var v = null;
+  lista.forEach(function(r) {
+    if (!v || r.forca > v.forca || (r.forca === v.forca && r.ordem > v.ordem)) v = r;
+  });
+  return v;
 }
 
 // ============================================================
@@ -2583,9 +2815,32 @@ function pedidoTemBarrilPequeno() {
 // Pagamento só é oferecido quando NENHuma das duas condições de bloqueio
 // se aplica: data de alta demanda, OU barril de 10/20L no carrinho.
 // Qualquer uma das duas, sozinha, já joga pro modelo antigo.
+// Pagamento online só com antecedência mínima (padrão do ano todo): com 2,
+// evento HOJE ou AMANHÃ vai para o fluxo antigo de confirmação pelo WhatsApp.
+// "Hoje" é sempre o dia no fuso de São Paulo, não o do aparelho do cliente.
+var PAGAMENTO_ANTECEDENCIA_MIN_DIAS = 2;
+
+function mcHojeSP() {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  } catch (e) {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+}
+
+function pagamentoBloqueadoPorAntecedencia(isoDate) {
+  if (!isoDate) return false;
+  var e = isoDate.split('-'), h = mcHojeSP().split('-');
+  if (e.length !== 3 || h.length !== 3) return false;
+  var dias = Math.round((Date.UTC(+e[0], +e[1] - 1, +e[2]) - Date.UTC(+h[0], +h[1] - 1, +h[2])) / 86400000);
+  return dias < PAGAMENTO_ANTECEDENCIA_MIN_DIAS;
+}
+
 function pagamentoOnlineDisponivel() {
   if (pedidoTemBarrilPequeno()) return false;
   if (dataDePagamentoBloqueada(order.eventDate)) return false;
+  if (pagamentoBloqueadoPorAntecedencia(order.eventDate)) return false;
   return true;
 }
 
@@ -2935,7 +3190,8 @@ function mcContinuarBarris() {
   // Já começa a carregar a área de atendimento enquanto o cliente preenche o endereço
   if (!bairrosData || bairrosData === 'ERRO') { carregarBairros(); }
   if (!__mcIniciou) { __mcIniciou = true; mcTrack('iniciou_pedido', { servico: order.service || '' }); }
-  goToStep(2);
+  if (calendarioData === 'ERRO') { carregarCalendario(); }
+  goToStep(4); // Barris → Data (a data vem antes do endereço: o frete depende dela)
 }
 
 // ============================================================
@@ -2944,7 +3200,7 @@ function mcContinuarBarris() {
 function mcContinuarChopeira() {
   if (!order.chopeira) { alert('Por favor, selecione o tipo de chopeira.'); return; }
   if (order.chopeira === 'eletrica' && !order.tensao) { alert('Por favor, selecione a tensão da chopeira elétrica.'); return; }
-  goToStep(4);
+  goToStep(5); // Chopeira → Seus Dados
 }
 
 function goToStep3() {
@@ -2990,9 +3246,15 @@ function goToStep3() {
   order.localOutros = document.getElementById('localOutros').value.trim();
 
   // Validate neighbourhood
-  var validacao = validarBairro(bairro);
+  var validacao = validarBairro(bairro, order.eventDate);
   if (!validacao.ok) {
     var msg;
+    if (validacao.aviso === 'bloqueado_data') {
+      showErr('err-bairro', 'x');
+      document.getElementById('err-bairro').innerHTML = mcMsgBloqueioData(bairro);
+      document.getElementById('err-bairro').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     if (validacao.aviso === 'carregando') {
       msg = 'Verificando área de atendimento... Tente novamente em alguns segundos. (Se o problema persistir, entre em contato pelo WhatsApp.)';
       carregarBairros(); // trigger a fresh retry
@@ -3016,7 +3278,7 @@ function goToStep3() {
 
   // Se o cliente marcou "já tenho os equipamentos", a etapa Chopeira é pulada
   if (order.service === 'barris') {
-    goToStep(4);
+    goToStep(5);
   } else {
     goToStep(1);
   }
@@ -3026,6 +3288,13 @@ function goToStep3() {
 //  COBERTURA DE ATENDIMENTO + FRETE (mostrado na etapa Endereço)
 //  Evita que o cliente precise chegar ao Resumo para saber o frete.
 // ============================================================
+function mcMsgBloqueioData(bairro) {
+  var d = String(order.eventDate || '').split('-');
+  var dataBR = d.length === 3 ? d[2] + '/' + d[1] + '/' + d[0] : 'a data escolhida';
+  return 'Infelizmente não conseguimos atender <strong>' + bairro + '</strong> em ' + dataBR + '. ' +
+         '<a href="#" onclick="goToStep(4); return false;" style="font-weight:700;text-decoration:underline;">Escolher outra data</a>';
+}
+
 function mcAvaliarBairro(silencioso) {
   var box = document.getElementById('cobertura-box');
   if (!box) return;
@@ -3038,8 +3307,20 @@ function mcAvaliarBairro(silencioso) {
 
   if (!bairro) { box.style.display = 'none'; return; }
 
-  var v = validarBairro(bairro);
+  var v = validarBairro(bairro, order.eventDate);
   box.classList.remove('is-ok', 'is-warn', 'is-err');
+
+  // Região/bairro sem atendimento NA DATA escolhida (aba Calendario)
+  if (v.aviso === 'bloqueado_data') {
+    box.classList.add('is-err');
+    icon.textContent = '📅';
+    titl.textContent = 'Sem atendimento nessa data';
+    text.innerHTML = mcMsgBloqueioData(bairro);
+    box.style.display = 'flex';
+    order.freteExtra = 0;
+    updateBeerSubtotal();
+    return;
+  }
 
   // Planilha ainda carregando: mostra "verificando" e tenta de novo
   if (v.aviso === 'carregando') {
@@ -3333,7 +3614,11 @@ function goToStep5() {
     order.pickupTime = pTime;
   }
 
-  goToStep(5);
+  // Data → Endereço. Se o endereço já estava preenchido (cliente voltou para
+  // trocar a data), reavalia frete/bloqueio para a data nova.
+  var __bairroEl = document.getElementById('bairro');
+  if (__bairroEl && __bairroEl.value.trim()) mcAvaliarBairro(true);
+  goToStep(2);
 }
 
 function goToStep6() {
@@ -4289,10 +4574,10 @@ var MC_STEP_LABELS = {
   5: 'Seus Dados', 6: 'Pagamento', 7: 'Resumo',
   8: 'Pagamento', 9: 'Confirmação'
 };
-var MC_SEQ_KIT_BLOQUEADO    = [3, 2, 1, 4, 5, 6, 7];       // igual ao fluxo original
-var MC_SEQ_BARRIS_BLOQUEADO = [3, 2, 4, 5, 6, 7];
-var MC_SEQ_KIT_LIBERADO     = [3, 2, 1, 4, 5, 7, 8, 9];    // Resumo → Pagamento real → Confirmação
-var MC_SEQ_BARRIS_LIBERADO  = [3, 2, 4, 5, 7, 8, 9];
+var MC_SEQ_KIT_BLOQUEADO    = [3, 4, 2, 1, 5, 6, 7];       // igual ao fluxo original
+var MC_SEQ_BARRIS_BLOQUEADO = [3, 4, 2, 5, 6, 7];
+var MC_SEQ_KIT_LIBERADO     = [3, 4, 2, 1, 5, 7, 8, 9];    // Resumo → Pagamento real → Confirmação
+var MC_SEQ_BARRIS_LIBERADO  = [3, 4, 2, 5, 7, 8, 9];
 var mcCurrentStep = 3;
 
 function mcSeq() {
@@ -4533,6 +4818,7 @@ function initConsentimento() {
   carregarBairros();
   carregarDatas();
   carregarPrecos();
+  carregarCalendario();
   var __termoCorpo = document.getElementById('termoCorpo');
   if (__termoCorpo) __termoCorpo.addEventListener('scroll', mcTermoScroll);
   selectService('kit');      // padrão: chope + chopeira inclusa
