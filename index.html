@@ -2236,31 +2236,56 @@ function mcCabecalhoGviz(table, palavraChave) {
   return null;
 }
 
+// Letra da coluna (0=A, 1=B, ... 25=Z, 26=AA, ...), sempre em minúsculo.
+function mcLetraColuna(idx) {
+  var s = '';
+  idx = idx + 1;
+  while (idx > 0) {
+    var r = (idx - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    idx = Math.floor((idx - 1) / 26);
+  }
+  return s.toLowerCase();
+}
+
 // Converte a aba Bairros em
-//   { bairro: {atende, frete, fretes: {nome_coluna: valor|null}, regiao} }
-// "frete" = 1ª coluna de frete (o frete padrão). Colunas de frete extras
-// (ex.: "FRETE DEZEMBRO") ficam em "fretes" e são escolhidas pela aba
-// Calendario (ação TABELA). Célula vazia numa coluna extra = usa o padrão.
+//   { bairro: {atende, frete, fretes: {letra_da_coluna: valor|null}, regiao} }
+// "frete" (coluna D) é sempre o frete padrão. Toda coluna à direita dela é
+// tratada como uma coluna de frete extra (frete de época) e fica em "fretes",
+// indexada pela LETRA da coluna (d, e, f...) — NUNCA pelo nome do cabeçalho.
+//
+// Por quê pela letra, e não pelo nome escrito na planilha: o Google decide o
+// "tipo" de cada coluna pela maioria dos valores nela. Como essas colunas são
+// quase só números, o Google as trata como numéricas — e qualquer texto que
+// caia numa coluna numérica, INCLUSIVE o título dela, é descartado antes de
+// chegar ao site (vira nulo). Isso vale mesmo para "FRETE (R$...)" e
+// "FRETE DEZEMBRO": o nome nunca sobrevive. A letra da coluna nunca tem esse
+// problema, por isso é o que a aba Calendario deve usar na coluna VALOR
+// (ex.: "E" para a coluna E), e não o nome escrito no cabeçalho.
 function parseGvizTable(table) {
   var result = {};
   var rows = table.rows || [];
-  var colBairro = 0, colRegiao = 1, colAtende = 2, colsFrete = [{ idx: 3, nome: 'frete' }];
-  var inicio = 0;
+  var colBairro = 0, colRegiao = 1, colAtende = 2, colFretePadrao = 3;
+  var inicio = 0, larguraLinha = 4;
 
   var cab = mcCabecalhoGviz(table, 'bairro');
   if (cab) {
     inicio = cab.inicio;
-    var achou = {}, fretes = [];
+    larguraLinha = cab.nomes.length;
+    var achou = {};
     for (var c = 0; c < cab.nomes.length; c++) {
       var n = cab.nomes[c];
       if (!n) continue;
       if (!achou.bairro && n.indexOf('bairro') >= 0) { colBairro = c; achou.bairro = true; }
       else if (!achou.regiao && n.indexOf('regiao') >= 0) { colRegiao = c; achou.regiao = true; }
       else if (!achou.atende && n.indexOf('atende') >= 0) { colAtende = c; achou.atende = true; }
-      else if (n.indexOf('frete') >= 0) fretes.push({ idx: c, nome: n });
     }
-    if (fretes.length) colsFrete = fretes;
   }
+  // Toda coluna depois de ATENDE é uma coluna de frete: a 1ª (colAtende+1) é
+  // o frete padrão; as seguintes são fretes de época, endereçadas por letra.
+  colFretePadrao = colAtende + 1;
+  var maxCol = Math.max(larguraLinha, colFretePadrao + 1);
+  (rows[0] && rows[0].c ? rows[0].c.length : 0); // no-op, mantém rows referenciado
 
   function num(cell) {
     if (!cell || cell.v == null || cell.v === '') return null;
@@ -2279,10 +2304,13 @@ function parseGvizTable(table) {
     if (!bairro || bairro === 'bairro') continue;
     var atendeRaw = cells[colAtende] && cells[colAtende].v != null ? String(cells[colAtende].v).trim().toLowerCase() : '';
     var fretes = {};
-    colsFrete.forEach(function(cf) { fretes[cf.nome] = num(cells[cf.idx]); });
+    var larguraReal = Math.max(maxCol, cells.length);
+    for (var fc = colFretePadrao; fc < larguraReal; fc++) {
+      fretes[mcLetraColuna(fc)] = num(cells[fc]);
+    }
     var entrada = {
       atende: atendeRaw.charAt(0) === 's',
-      frete: fretes[colsFrete[0].nome] || 0,
+      frete: fretes[mcLetraColuna(colFretePadrao)] || 0,
       fretes: fretes,
       regiao: mcNorm(cells[colRegiao] && cells[colRegiao].v),
       chave: mcNorm(bairro)
@@ -2325,14 +2353,13 @@ function validarBairro(bairro, isoDate) {
     }
     var tabela = mcRegraVencedora(regras.filter(function(r) { return r.acao === 'tabela'; }));
     if (tabela) {
-      var alvoCol = mcNorm(tabela.valor), nomeCol = null;
-      Object.keys(entry.fretes || {}).forEach(function(n) {
-        if (n === alvoCol || (!nomeCol && n.indexOf(alvoCol) >= 0)) nomeCol = n;
-      });
-      if (!nomeCol) {
-        console.warn('[Calendario] Coluna de frete "' + tabela.valor + '" não existe na aba Bairros (linha ' + tabela.linha + ') — usei o frete padrão.');
-      } else if (typeof entry.fretes[nomeCol] === 'number') {
-        frete = entry.fretes[nomeCol];
+      // VALOR identifica a coluna de frete pela LETRA (ex.: "E") — nunca pelo
+      // nome escrito no cabeçalho, que o Google apaga em colunas numéricas.
+      var letraCol = mcNorm(tabela.valor).replace(/[^a-z]/g, '');
+      if (!letraCol || !(letraCol in entry.fretes)) {
+        console.warn('[Calendario] VALOR "' + tabela.valor + '" (linha ' + tabela.linha + ') não é uma letra de coluna válida da aba Bairros — usei o frete padrão. Escreva a letra da coluna, ex.: "E".');
+      } else if (typeof entry.fretes[letraCol] === 'number') {
+        frete = entry.fretes[letraCol];
       } // célula vazia na coluna extra = frete padrão
     }
   }
