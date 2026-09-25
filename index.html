@@ -2349,6 +2349,131 @@ function dataDePagamentoBloqueada(isoDate) {
 }
 
 // ============================================================
+//  PREÇOS DOS BARRIS — aba "Preços" (mesma planilha, gviz)
+//  Mesma técnica das abas Bairros e Datas. Colunas:
+//    Produto | Litros | Preço Kit | Preço Barris
+//  "Produto" é o identificador interno da cerveja (pilsen, angra,
+//  matilda, euforia, vertigem, amnesia, goiaba, mississipi) — o nome
+//  bonito exibido ao cliente continua definido no BEER_CATALOG.
+//
+//  REGRAS DE SEGURANÇA (a planilha nunca quebra o site):
+//  - Se a aba não carregar, o site usa os preços fixos do BEER_CATALOG.
+//  - Célula vazia, não numérica ou fora da faixa PRECO_MIN..PRECO_MAX
+//    é ignorada (vale o preço fixo daquele item) e gera aviso no console.
+//    A faixa protege contra erro de digitação (ex.: 52 no lugar de 520),
+//    que viraria cobrança real no Asaas.
+//  - A planilha só ALTERA preços de produtos/tamanhos que já existem no
+//    site. Produto ou tamanho novo continua exigindo mudança no código.
+//  - Se a planilha responder depois que o cliente já saiu da etapa
+//    Barris, os preços NÃO são trocados no meio do pedido (evita o total
+//    mudar entre o resumo e o pagamento). Vale o preço fixo nessa sessão.
+// ============================================================
+var PRECO_MIN = 100;
+var PRECO_MAX = 5000;
+var precosPlanilhaStatus = null; // null = carregando | 'ok' | 'ERRO' | 'ignorado'
+
+function carregarPrecos() {
+  if (!PLANILHA_BAIRROS_URL || PLANILHA_BAIRROS_URL.indexOf('http') !== 0) return;
+  var info = extrairChaveGid(PLANILHA_BAIRROS_URL);
+  if (!info) { precosPlanilhaStatus = 'ERRO'; return; }
+
+  window.gvizCallbackPrecos = function(resp) {
+    try {
+      if (!resp || !resp.table) throw new Error('Resposta sem dados');
+      aplicarPrecosPlanilha(parseGvizPrecos(resp.table));
+    } catch (err) {
+      console.warn('[Preços] Erro ao processar resposta — mantidos os preços fixos do site:', err);
+      precosPlanilhaStatus = 'ERRO';
+    }
+  };
+
+  var url = 'https://docs.google.com/spreadsheets/d/' + info.chave +
+            '/gviz/tq?sheet=' + encodeURIComponent('Preços') +
+            '&tqx=responseHandler:gvizCallbackPrecos&headers=1';
+
+  var script = document.createElement('script');
+  script.src = url;
+  script.onerror = function() {
+    console.warn('[Preços] ✗ Falha ao carregar — mantidos os preços fixos do site.');
+    precosPlanilhaStatus = 'ERRO';
+  };
+  document.head.appendChild(script);
+}
+
+function normalizarChavePreco(v) {
+  return String(v == null ? '' : v).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function lerNumeroPreco(cell) {
+  if (!cell || cell.v == null || cell.v === '') return null;
+  if (typeof cell.v === 'number') return cell.v;
+  var s = String(cell.v).replace(/[^\d.,]/g, '');
+  if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.');
+  var n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+// Converte a tabela do gviz em { 'pilsen|30': {kit: 520, barris: 390}, ... }
+function parseGvizPrecos(table) {
+  var result = {};
+  var rows = table.rows || [];
+  var colProd = 0, colLitros = 1, colKit = 2, colBarris = 3;
+  if (table.cols && table.cols.length) {
+    for (var c = 0; c < table.cols.length; c++) {
+      var label = normalizarChavePreco(table.cols[c].label);
+      if (label.indexOf('produto') >= 0) colProd = c;
+      else if (label.indexOf('litro') >= 0) colLitros = c;
+      else if (label.indexOf('kit') >= 0) colKit = c;
+      else if (label.indexOf('barri') >= 0) colBarris = c;
+    }
+  }
+  for (var i = 0; i < rows.length; i++) {
+    var cells = rows[i].c;
+    if (!cells || !cells[colProd] || cells[colProd].v == null) continue;
+    var prod = normalizarChavePreco(cells[colProd].v);
+    var litros = lerNumeroPreco(cells[colLitros]);
+    if (!prod || prod === 'produto' || !litros) continue;
+    result[prod + '|' + Math.round(litros)] = {
+      kit: lerNumeroPreco(cells[colKit]),
+      barris: lerNumeroPreco(cells[colBarris])
+    };
+  }
+  return result;
+}
+
+function precoValido(v) {
+  return typeof v === 'number' && isFinite(v) && v >= PRECO_MIN && v <= PRECO_MAX;
+}
+
+function aplicarPrecosPlanilha(mapa) {
+  // Cliente já avançou além da etapa Barris: não troca preço no meio do pedido.
+  if (typeof mcCurrentStep !== 'undefined' && mcCurrentStep !== 3) {
+    console.warn('[Preços] Planilha chegou depois que o cliente saiu da etapa Barris — mantidos os preços fixos nesta sessão.');
+    precosPlanilhaStatus = 'ignorado';
+    return;
+  }
+
+  var aplicados = 0, avisos = [];
+  BEER_CATALOG.forEach(function(beer) {
+    var chaves = [normalizarChavePreco(beer.id), normalizarChavePreco(beer.name)];
+    beer.sizes.forEach(function(sz) {
+      var linha = mapa[chaves[0] + '|' + sz.l] || mapa[chaves[1] + '|' + sz.l];
+      if (!linha) { avisos.push(beer.id + ' ' + sz.l + 'L: sem linha na planilha'); return; }
+      if (precoValido(linha.kit)) { sz.priceKit = linha.kit; aplicados++; }
+      else avisos.push(beer.id + ' ' + sz.l + 'L: Preço Kit inválido (' + linha.kit + ')');
+      if (precoValido(linha.barris)) { sz.priceBarris = linha.barris; aplicados++; }
+      else avisos.push(beer.id + ' ' + sz.l + 'L: Preço Barris inválido (' + linha.barris + ')');
+    });
+  });
+
+  precosPlanilhaStatus = 'ok';
+  console.log('[Preços] ✓ ' + aplicados + ' preço(s) aplicados da planilha.');
+  if (avisos.length) console.warn('[Preços] Mantido o preço fixo do site em: ' + avisos.join(' | '));
+  refreshBeerPrices();
+}
+
+// ============================================================
 //  AGE GATE
 // ============================================================
 function confirmAge(isAdult) {
@@ -4407,6 +4532,7 @@ function initConsentimento() {
   selectTipoCadastro('cpf');
   carregarBairros();
   carregarDatas();
+  carregarPrecos();
   var __termoCorpo = document.getElementById('termoCorpo');
   if (__termoCorpo) __termoCorpo.addEventListener('scroll', mcTermoScroll);
   selectService('kit');      // padrão: chope + chopeira inclusa
