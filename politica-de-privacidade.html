@@ -264,7 +264,7 @@
         Cervejaria Mistura Clássica — deliverymistura.com.br
       </p>
 
-      <a class="pp-back" href="index.html">← Voltar ao site</a>
+      <a class="pp-back" href="index.html" onclick="return mcVoltarAoSite();">← Voltar ao site</a>
     </div>
   </div>
 
@@ -272,5 +272,17 @@
     © <span id="pp-year"></span> Cervejaria Mistura Clássica · Todos os direitos reservados.
   </footer>
   <script>document.getElementById('pp-year').textContent = new Date().getFullYear();</script>
+  <script>
+    // "Voltar": se o cliente veio do próprio site, volta à página anterior sem
+    // recarregar (no iPhone/WhatsApp isso normalmente preserva o pedido em
+    // andamento). Se abriu direto ou numa aba nova, segue o link normal.
+    function mcVoltarAoSite() {
+      try {
+        var veioDoSite = document.referrer && document.referrer.indexOf(location.host) !== -1;
+        if (veioDoSite && history.length > 1) { history.back(); return false; }
+      } catch (e) {}
+      return true;
+    }
+  </script>
 </body>
 </html>

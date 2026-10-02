@@ -196,7 +196,7 @@
       <p>12.4. Fica eleito o foro da Comarca do Rio de Janeiro, Estado do Rio de Janeiro, para dirimir as controvérsias decorrentes deste Termo, <strong>ressalvado</strong>, nas relações de consumo, o direito do CONTRATANTE de ajuizar demanda no foro de seu domicílio, na forma do art. 101, I, do Código de Defesa do Consumidor.</p>
 
 <!-- ========== FIM DO CORPO DO TERMO ========== -->
-      <a class="tr-voltar" href="index.html">&larr; Voltar para o site</a>
+      <a class="tr-voltar" href="index.html" onclick="return mcVoltarAoSite();">&larr; Voltar para o site</a>
     </div>
   </main>
 
@@ -211,5 +211,17 @@
     document.getElementById('tr-ano').textContent = new Date().getFullYear();
   </script>
 
+  <script>
+    // "Voltar": se o cliente veio do próprio site, volta à página anterior sem
+    // recarregar (no iPhone/WhatsApp isso normalmente preserva o pedido em
+    // andamento). Se abriu direto ou numa aba nova, segue o link normal.
+    function mcVoltarAoSite() {
+      try {
+        var veioDoSite = document.referrer && document.referrer.indexOf(location.host) !== -1;
+        if (veioDoSite && history.length > 1) { history.back(); return false; }
+      } catch (e) {}
+      return true;
+    }
+  </script>
 </body>
 </html>
