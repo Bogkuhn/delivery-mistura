@@ -577,11 +577,13 @@
       position: fixed; inset: 0; z-index: 100000;
       background: rgba(26,18,8,0.72); backdrop-filter: blur(3px);
       display: none; align-items: center; justify-content: center; padding: 20px;
+      overscroll-behavior: contain;
     }
     .mc-termo-overlay.show { display: flex; }
     .mc-termo-card {
       background: var(--white); border-radius: 16px; width: 100%; max-width: 760px;
-      max-height: 92vh; display: flex; flex-direction: column; overflow: hidden;
+      max-height: 92vh; max-height: 92dvh; max-height: 100%;
+      display: flex; flex-direction: column; overflow: hidden;
       box-shadow: 0 24px 60px rgba(0,0,0,0.35);
     }
     .mc-termo-head { padding: 20px 26px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
@@ -591,6 +593,8 @@
       padding: 18px 26px 22px; overflow-y: auto; flex: 1;
       font-size: 13.5px; line-height: 1.6; color: var(--text);
       -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      min-height: 0;
     }
     .mc-termo-corpo h3 {
       font-family: 'Playfair Display', serif; font-size: 15px; color: var(--dark);
@@ -622,12 +626,26 @@
     }
     .mc-aceite-aviso.is-ok { border-color: #BFE6CC; background: #F3FBF6; color: #1E8449; }
     @media (max-width: 600px) {
+      /* iPhone/Safari: NÃO usar 100vh aqui. No iOS, 100vh = altura da tela
+         com a barra do Safari ESCONDIDA. Quando a barra reaparece (e ela
+         reaparece justamente quando o cliente toca perto da borda de baixo,
+         onde ficava o botão), o card ficava maior que a área visível,
+         transbordava por cima e por baixo e o "Aceitar e continuar" sumia
+         atrás da barra — o toque não fazia nada. Relatado por 2 clientes
+         em out/2026. Agora o card ocupa 100% do overlay (que é fixed,
+         inset 0, e acompanha a área visível real). */
       .mc-termo-overlay { padding: 0; }
-      .mc-termo-card { max-height: 100vh; border-radius: 0; }
-      .mc-termo-head { padding: 16px 18px 13px; }
+      .mc-termo-card { height: 100%; max-height: 100%; border-radius: 0; }
+      .mc-termo-head { padding: 14px 18px 11px; }
+      .mc-termo-head h3 { font-size: 18px; }
       .mc-termo-corpo { padding: 15px 18px 20px; font-size: 13px; }
-      .mc-termo-foot { padding: 14px 18px 18px; }
-      .mc-termo-acoes { flex-direction: column; }
+      /* Margem generosa embaixo: tira o botão da faixa da borda inferior,
+         onde o primeiro toque no iOS só faz a barra do Safari reaparecer. */
+      .mc-termo-foot { padding: 12px 18px calc(34px + env(safe-area-inset-bottom, 0px)); }
+      .mc-termo-check { margin-bottom: 12px; }
+      /* Botão principal EM CIMA do Cancelar: se algo cobrir a parte de
+         baixo, o que fica escondido é o Cancelar, nunca o aceite. */
+      .mc-termo-acoes { flex-direction: column-reverse; gap: 10px; }
     }
 
     /* ===== Checkbox "já tenho os equipamentos" (etapa Barris) ===== */
@@ -1395,6 +1413,15 @@
             <option value="23:00">23h00</option>
           </select>
           <div class="form-error" id="err-time">Por favor, selecione o horário.</div>
+        </div>
+      </div>
+
+      <!-- Pedido mínimo da data escolhida (ação MINIMO da aba Calendario) -->
+      <div id="minimo-box" class="mc-cob is-err" style="display:none; margin-bottom:14px;">
+        <div class="mc-cob-icon">🍺</div>
+        <div class="mc-cob-body">
+          <div class="mc-cob-title" id="minimo-title"></div>
+          <div class="mc-cob-text" id="minimo-text"></div>
         </div>
       </div>
 
@@ -2384,11 +2411,13 @@ function validarBairro(bairro, isoDate) {
 // ============================================================
 //  CALENDÁRIO — aba "Calendario" (mesma planilha, gviz)
 //  Regras por data: qual coluna de frete vale (TABELA), bloqueio de
-//  região/bairro (BLOQUEAR) e exceção a um bloqueio (LIBERAR).
+//  região/bairro (BLOQUEAR), exceção a um bloqueio (LIBERAR) e pedido
+//  mínimo em litros (MINIMO, com os litros em VALOR, ex.: "50 L").
 //  Colunas: ATIVO | DATA INÍCIO | DATA FIM | DIAS DA SEMANA |
 //           TIPO DE ALVO | ALVO | AÇÃO | VALOR | OBS
 //  Prioridade: regra de BAIRRO > de REGIÃO > de TODOS; empate = vale a
-//  linha mais abaixo. Bloqueio e tabela de frete são decididos em separado.
+//  linha mais abaixo. Bloqueio, tabela de frete e pedido mínimo são
+//  decididos em separado (uma regra de um tipo não interfere nas outras).
 //  Se a aba falhar, o site segue sem regras (frete padrão, sem bloqueio) —
 //  mesmo princípio das outras abas: uma falha de rede nunca trava o site.
 //  O manual completo fica na aba "Manual" da planilha.
@@ -2410,6 +2439,8 @@ function carregarCalendario() {
       calendarioData = 'ERRO';
     }
     if (typeof mcCurrentStep !== 'undefined' && mcCurrentStep === 2) mcAvaliarBairro(true);
+    if (typeof mcCurrentStep !== 'undefined' && mcCurrentStep === 4) mcAvaliarMinimoData();
+    mcAtualizarNotaMinimo();
   };
 
   var url = 'https://docs.google.com/spreadsheets/d/' + info.chave +
@@ -2456,6 +2487,14 @@ function parseGvizCalendario(table) {
     console.warn('[Calendario] Faltam as colunas DATA INÍCIO e/ou AÇÃO — nenhuma regra aplicada.');
     return [];
   }
+  // Se a coluna VALOR tiver mais números do que textos, o Google passa a
+  // tratá-la como numérica e descarta os textos dela — inclusive a letra da
+  // coluna de frete das regras TABELA. Por isso os litros do MINIMO devem ser
+  // escritos como texto ("50 L"), nunca só o número.
+  var colValorInfo = (col.valor != null && table.cols) ? table.cols[col.valor] : null;
+  if (colValorInfo && colValorInfo.type === 'number') {
+    console.warn('[Calendario] ATENÇÃO: a coluna VALOR chegou como numérica — o Google descartou os textos dela (ex.: a letra "E" das regras TABELA). Escreva os litros do MINIMO com a letra L (ex.: "50 L") em vez de só o número.');
+  }
 
   var regras = [], rows = table.rows || [];
   for (var i = cab.inicio; i < rows.length; i++) {
@@ -2469,7 +2508,8 @@ function parseGvizCalendario(table) {
 
     var acao = acaoRaw.indexOf('bloq') === 0 ? 'bloquear'
              : acaoRaw.indexOf('liber') === 0 ? 'liberar'
-             : acaoRaw.indexOf('tab') === 0 ? 'tabela' : null;
+             : acaoRaw.indexOf('tab') === 0 ? 'tabela'
+             : acaoRaw.indexOf('min') === 0 ? 'minimo' : null;
     if (!acao) { console.warn('[Calendario] Linha ' + linhaPlanilha + ': AÇÃO "' + get('acao') + '" desconhecida — ignorada.'); continue; }
 
     var ini = mcDataCelula(col.inicio != null ? cells[col.inicio] : null);
@@ -2494,6 +2534,7 @@ function parseGvizCalendario(table) {
 
     var valor = String(get('valor') || '').trim();
     if (acao === 'tabela' && !valor) { console.warn('[Calendario] Linha ' + linhaPlanilha + ': TABELA sem VALOR — ignorada.'); continue; }
+    if (acao === 'minimo' && mcLitrosDoValor(valor) == null) { console.warn('[Calendario] Linha ' + linhaPlanilha + ': MINIMO precisa dos litros em VALOR (ex.: "50 L") — ignorada.'); continue; }
 
     regras.push({
       linha: linhaPlanilha, ordem: regras.length,
@@ -2532,6 +2573,132 @@ function mcRegraVencedora(lista) {
     if (!v || r.forca > v.forca || (r.forca === v.forca && r.ordem > v.ordem)) v = r;
   });
   return v;
+}
+
+// ============================================================
+//  PEDIDO MÍNIMO POR DATA — ação MINIMO da aba Calendario
+//  O mínimo existe por causa das CHOPEIRAS (poucas unidades, muita procura):
+//  só vale para pedidos com chopeira (kit). "Somente Barris" nunca tem
+//  mínimo, com ou sem regra no Calendario.
+//  Padrão do ano todo: 30 litros. Uma regra MINIMO vale NO LUGAR do padrão
+//  nas datas dela. VALOR traz os litros ("50 L"; "50" e "50 litros" também
+//  são aceitos pelo site, mas na planilha escreva sempre com o L).
+//  O cliente escolhe os barris ANTES da data. Por isso o mínimo da data é
+//  conferido na etapa Data (ao escolher a data e ao continuar), de novo na
+//  etapa Endereço (quando há regra por região/bairro) e na etapa Barris
+//  quando o cliente volta para ajustar o pedido.
+//  Pedido sem nenhum barril segue a regra antiga (só a confirmação).
+// ============================================================
+var MC_MIN_LITROS_PADRAO = 30;
+
+// "50", "50 L", "50 litros" → 50. Vazio ou fora de 1 a 1000 = inválido (null).
+function mcLitrosDoValor(valor) {
+  var m = String(valor == null ? '' : valor).match(/\d+/);
+  if (!m) return null;
+  var n = parseInt(m[0], 10);
+  return (n >= 1 && n <= 1000) ? n : null;
+}
+
+function mcDataBR(isoDate) {
+  var d = String(isoDate || '').split('-');
+  return d.length === 3 ? d[2] + '/' + d[1] + '/' + d[0] : 'a data escolhida';
+}
+
+// Linha da aba Bairros para o nome informado (ou null se não achou/carregou).
+function mcEntradaBairro(bairro) {
+  if (!bairro || !bairrosData || bairrosData === 'ERRO') return null;
+  var key   = String(bairro).toLowerCase().trim();
+  var keySA = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return bairrosData[key] || bairrosData[keySA] || null;
+}
+
+function mcEntradaBairroAtual() {
+  var el = document.getElementById('bairro');
+  return el ? mcEntradaBairro(el.value) : null;
+}
+
+// Mínimo de litros para a data do evento → { litros, porData }.
+// Com o bairro conhecido (entry), vale a regra mais específica para ele.
+// Sem bairro ainda, vale o MENOR mínimo possível naquela data — assim o site
+// nunca barra antes da hora quem pode estar num bairro com regra própria; a
+// conferência exata acontece na etapa Endereço.
+function mcMinimoLitros(isoDate, entry) {
+  // "Somente Barris" não usa chopeira: sem mínimo, e as regras MINIMO não se aplicam.
+  if (order.service !== 'kit') return { litros: 0, porData: false };
+  var res = { litros: MC_MIN_LITROS_PADRAO, porData: false };
+  if (!isoDate || !Array.isArray(calendarioData)) return res;
+
+  var soMinimo = function(r) { return r.acao === 'minimo'; };
+  var vence = mcRegraVencedora(mcRegrasDoDia(isoDate, entry || { regiao: '', chave: '' }).filter(soMinimo));
+  if (vence) { res.litros = mcLitrosDoValor(vence.valor); res.porData = true; }
+  if (entry) return res;
+
+  var p = isoDate.split('-');
+  if (p.length !== 3) return res;
+  var dataNum = +p[0] * 10000 + +p[1] * 100 + +p[2];
+  var diaSemana = new Date(+p[0], +p[1] - 1, +p[2]).getDay();
+  calendarioData.forEach(function(r) {
+    if (r.acao !== 'minimo' || r.tipo === 'todos') return;
+    if (dataNum < r.ini || dataNum > r.fim) return;
+    if (r.dias && !r.dias[diaSemana]) return;
+    var n = mcLitrosDoValor(r.valor);
+    if (n != null && n < res.litros) { res.litros = n; res.porData = true; }
+  });
+  return res;
+}
+
+// Confere o pedido atual contra o mínimo da data.
+// null = está ok; senão { minimo, total, porData }.
+function mcFaltaMinimo(entry) {
+  var total = calcTotalLiters();
+  if (total <= 0) return null;
+  var m = mcMinimoLitros(order.eventDate, entry);
+  if (total >= m.litros) return null;
+  return { minimo: m.litros, total: total, porData: m.porData };
+}
+
+// Texto simples (alert da etapa Barris).
+function mcTextoMinimo(f) {
+  var regra = f.porData
+    ? 'Para eventos em ' + mcDataBR(order.eventDate) + ', o pedido com chopeira inclusa requer um mínimo de ' + f.minimo + ' litros.'
+    : 'O pedido com chopeira inclusa requer um mínimo de ' + f.minimo + ' litros.';
+  return regra + '\n\nSeu pedido atual tem ' + f.total + ' litros. Adicione mais barris para continuar.';
+}
+
+// Texto com links (caixas das etapas Data e Endereço).
+function mcHtmlMinimo(f, linkData) {
+  var estilo = 'font-weight:700;text-decoration:underline;';
+  var regra = f.porData
+    ? 'Para eventos em <strong>' + mcDataBR(order.eventDate) + '</strong>, o pedido com chopeira inclusa requer um mínimo de <strong>' + f.minimo + ' litros</strong>.'
+    : 'O pedido com chopeira inclusa requer um mínimo de <strong>' + f.minimo + ' litros</strong>.';
+  return regra + ' Seu pedido tem ' + f.total + ' litros. ' +
+         '<a href="#" onclick="goToStep(3); return false;" style="' + estilo + '">Adicionar barris</a>' +
+         (linkData
+           ? ' ou <a href="#" onclick="goToStep(4); return false;" style="' + estilo + '">escolher outra data</a>.'
+           : ' ou escolha outra data.');
+}
+
+// Etapa Data: mostra/esconde a caixa do pedido mínimo. Devolve a falta (ou null).
+function mcAvaliarMinimoData() {
+  var box = document.getElementById('minimo-box');
+  if (!box) return null;
+  var falta = mcFaltaMinimo(mcEntradaBairroAtual());
+  if (!falta) { box.style.display = 'none'; return null; }
+  document.getElementById('minimo-title').textContent = 'Pedido mínimo de ' + falta.minimo + ' litros';
+  document.getElementById('minimo-text').innerHTML = mcHtmlMinimo(falta, false);
+  box.style.display = 'flex';
+  return falta;
+}
+
+// Etapa Barris: a frase "Pedido mínimo de X litros" acompanha a data escolhida.
+function mcAtualizarNotaMinimo() {
+  var el = document.getElementById('min-liters-note');
+  if (!el) return;
+  var m = mcMinimoLitros(order.eventDate, mcEntradaBairroAtual());
+  if (!(m.litros > 0)) { el.style.display = 'none'; return; }
+  el.textContent = 'Pedido mínimo de ' + m.litros + ' litros' +
+                   (m.porData ? ' para ' + mcDataBR(order.eventDate) : '') + '.';
+  el.style.display = 'inline';
 }
 
 // ============================================================
@@ -3209,8 +3376,7 @@ function selectService(type) {
     if (chopSection) chopSection.style.display = 'block';
   }
 
-  var minNote = document.getElementById('min-liters-note');
-  if (minNote) minNote.style.display = (type === 'barris') ? 'none' : 'inline';
+  mcAtualizarNotaMinimo();
 
   var obBox = document.getElementById('onlybarrels-box');
   if (obBox) obBox.classList.toggle('is-on', type === 'barris');
@@ -3266,13 +3432,10 @@ function mcContinuarBarris() {
   if (calcTotalBarrels() === 0) {
     if (!confirm('Você não selecionou nenhum barril. Deseja continuar assim mesmo?')) return;
   }
-  if (order.service === 'kit') {
-    var totalL = calcTotalLiters();
-    if (totalL > 0 && totalL < 30) {
-      alert('O pedido com chopeira inclusa requer um mínimo de 30 litros.\n\nSeu pedido atual tem ' + totalL + ' litros. Adicione mais barris para continuar.');
-      return;
-    }
-  }
+  // Mínimo de litros (só pedidos com chopeira): 30; se a data já foi escolhida
+  // (cliente voltou para ajustar os barris), vale o mínimo daquela data.
+  var faltaMin = mcFaltaMinimo(mcEntradaBairroAtual());
+  if (faltaMin) { alert(mcTextoMinimo(faltaMin)); return; }
   // Já começa a carregar a área de atendimento enquanto o cliente preenche o endereço
   if (!bairrosData || bairrosData === 'ERRO') { carregarBairros(); }
   if (!__mcIniciou) { __mcIniciou = true; mcTrack('iniciou_pedido', { servico: order.service || '' }); }
@@ -3362,6 +3525,14 @@ function goToStep3() {
   mcAvaliarBairro(true);
   refreshBeerPrices();
 
+  // Pedido mínimo da data para ESTE bairro (regra por região/bairro só dá
+  // para conferir aqui, com o endereço informado). A caixa de cobertura já
+  // mostra o aviso (mcAvaliarBairro); aqui só impedimos de seguir.
+  if (mcFaltaMinimo(mcEntradaBairro(bairro))) {
+    document.getElementById('cobertura-box').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
   // Se o cliente marcou "já tenho os equipamentos", a etapa Chopeira é pulada
   if (order.service === 'barris') {
     goToStep(5);
@@ -3435,6 +3606,17 @@ function mcAvaliarBairro(silencioso) {
   order.freteExtra = v.frete || 0;
   updateBeerSubtotal();
 
+  // Bairro atendido, mas o pedido está abaixo do mínimo da data
+  var faltaMin = mcFaltaMinimo(mcEntradaBairro(bairro));
+  if (faltaMin) {
+    box.classList.add('is-err');
+    icon.textContent = '🍺';
+    titl.textContent = 'Pedido mínimo de ' + faltaMin.minimo + ' litros';
+    text.innerHTML = mcHtmlMinimo(faltaMin, true);
+    box.style.display = 'flex';
+    return;
+  }
+
   if (order.freteExtra > 0) {
     box.classList.add('is-warn');
     icon.textContent = '🚚';
@@ -3468,6 +3650,7 @@ document.getElementById('eventDate').addEventListener('change', function() {
   const t = document.getElementById('eventTime').value;
   if (t) updateDeliveryInfo(t);
   updatePickupUI();
+  mcAvaliarMinimoData();
 });
 document.getElementById('eventTime').addEventListener('change', function() {
   order.eventTime = this.value;
@@ -3506,13 +3689,8 @@ function goToStep4() {
     if (calcTotalBarrels() === 0) {
       if (!confirm('Você não selecionou nenhum barril. Deseja continuar assim mesmo?')) return;
     }
-    if (order.service === 'kit') {
-      var totalL = calcTotalLiters();
-      if (totalL > 0 && totalL < 30) {
-        alert('O pedido de Delivery de Chope com Chopeira Inclusa requer um mínimo de 30 litros.\n\nSeu pedido atual tem ' + totalL + ' litros. Adicione mais barris para continuar.');
-        return;
-      }
-    }
+    var faltaMin = mcFaltaMinimo(mcEntradaBairroAtual());
+    if (faltaMin) { alert(mcTextoMinimo(faltaMin)); return; }
   }
   goToStep(4);
 }
@@ -3677,6 +3855,12 @@ function goToStep5() {
   document.getElementById('err-time').style.display = 'none';
   order.eventDate = date;
   order.eventTime = time;
+
+  // Pedido mínimo da data (aba Calendario, ação MINIMO)
+  if (mcAvaliarMinimoData()) {
+    document.getElementById('minimo-box').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
 
   // Tipo de Entrega "Hora Marcada" exige horario
   if (order.delivery === 'exclusivo') {
@@ -4684,6 +4868,8 @@ function goToStep(n) {
   }
   mcCurrentStep = n;
   if (n === 1 && typeof renderIncentivoGelo === 'function') renderIncentivoGelo();
+  if (n === 3) mcAtualizarNotaMinimo();
+  if (n === 4) mcAvaliarMinimoData();
   renderProgress(n);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
