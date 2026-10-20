@@ -1912,7 +1912,7 @@
     <div class="mc-termo-corpo" id="termoCorpo">
       <p><strong>Versão 1.0 — vigente a partir de 24/07/2026.</strong> Esta é a versão do Termo aceita no momento do pedido e aplicável a ele, ainda que versões posteriores venham a ser publicadas.</p>
       <h3>PARTES</h3>
-      <p><strong>CONTRATADA:</strong> BEER FLOW DISTRIBUIDORA LTDA, pessoa jurídica de direito privado inscrita no CNPJ sob o nº 28.932.601/0001-51, com sede na Rua Maxwell 418A, Vila Isabel, na cidade do Rio de Janeiro, Estado do Rio de Janeiro, que atua no mercado sob o nome comercial e marca <strong>MISTURA CLÁSSICA</strong>.</p>
+      <p id="termoContratada"><strong>CONTRATADA:</strong> BEER FLOW DISTRIBUIDORA LTDA, pessoa jurídica de direito privado inscrita no CNPJ sob o nº 28.932.601/0001-51, com sede na Rua Maxwell 418A, Vila Isabel, na cidade do Rio de Janeiro, Estado do Rio de Janeiro, que atua no mercado sob o nome comercial e marca <strong>MISTURA CLÁSSICA</strong>.</p>
       <p><strong>CONTRATANTE:</strong> a pessoa física ou jurídica identificada no pedido, cujos dados (nome completo ou razão social, CPF ou CNPJ, data de nascimento, telefone, e-mail e endereço do evento) foram por ela informados no site deliverymistura.com.br e que integram este Termo para todos os efeitos legais.</p>
       <p>O pedido — com seus itens, quantidades, valores, data, horário e endereço do evento — é parte integrante e inseparável deste Termo, ao qual se vincula pelo respectivo número de pedido.</p>
       <p>Ao marcar a opção de aceite no site, o CONTRATANTE declara ter lido, compreendido e aceito integralmente as condições abaixo, manifestação que se dá por meio de assinatura eletrônica e produz todos os efeitos jurídicos entre as partes, nos termos do art. 10, § 2º, da Medida Provisória nº 2.200-2/2001 e da Lei nº 14.063/2020.</p>
@@ -2304,10 +2304,13 @@ function mcLetraColuna(idx) {
 // "FRETE DEZEMBRO": o nome nunca sobrevive. A letra da coluna nunca tem esse
 // problema, por isso é o que a aba Calendario deve usar na coluna VALOR
 // (ex.: "E" para a coluna E), e não o nome escrito no cabeçalho.
-function parseGvizTable(table) {
+// fonteCod (opcional) = código do distribuidor dono da planilha. Planilha de
+// distribuidor tem a coluna MUNICÍPIO: nela o bairro é procurado junto com o
+// município (o "Centro" de Angra não é o "Centro" de Mangaratiba).
+function parseGvizTable(table, fonteCod) {
   var result = {};
   var rows = table.rows || [];
-  var colBairro = 0, colRegiao = 1, colAtende = 2, colFretePadrao = 3;
+  var colBairro = 0, colRegiao = 1, colAtende = 2, colFretePadrao = 3, colMun = null;
   var inicio = 0, larguraLinha = 4;
 
   var cab = mcCabecalhoGviz(table, 'bairro');
@@ -2321,6 +2324,7 @@ function parseGvizTable(table) {
       if (!achou.bairro && n.indexOf('bairro') >= 0) { colBairro = c; achou.bairro = true; }
       else if (!achou.regiao && n.indexOf('regiao') >= 0) { colRegiao = c; achou.regiao = true; }
       else if (!achou.atende && n.indexOf('atende') >= 0) { colAtende = c; achou.atende = true; }
+      else if (!achou.mun && n.indexOf('municipio') >= 0) { colMun = c; achou.mun = true; }
     }
   }
   // Toda coluna depois de ATENDE é uma coluna de frete: a 1ª (colAtende+1) é
@@ -2355,12 +2359,21 @@ function parseGvizTable(table) {
       frete: fretes[mcLetraColuna(colFretePadrao)] || 0,
       fretes: fretes,
       regiao: mcNorm(cells[colRegiao] && cells[colRegiao].v),
-      chave: mcNorm(bairro)
+      chave: mcNorm(bairro),
+      fonte: fonteCod || ''
     };
     result[bairro] = entrada;
     var noAccent = bairro.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     if (noAccent !== bairro) result[noAccent] = entrada;
+    if (colMun != null) {
+      var munKey = mcNorm(mcLimparCidade(cells[colMun] && cells[colMun].v));
+      if (munKey) {
+        result[munKey + '|' + mcNorm(bairro)] = entrada;
+        result[munKey + '|' + mcNorm(bairro.replace(/\([^)]*\)/g, ' '))] = entrada;
+      }
+    }
   }
+  if (colMun != null) Object.defineProperty(result, '__porMunicipio', { value: true, enumerable: false });
   return result;
 }
 
@@ -2372,26 +2385,31 @@ function validarBairro(bairro, isoDate) {
   if (!PLANILHA_BAIRROS_URL || PLANILHA_BAIRROS_URL.indexOf('http') !== 0) {
     return { ok: true, frete: 0, aviso: null };
   }
+  return mcValidarNaFonte({ bairros: bairrosData, calendario: calendarioData }, bairro, isoDate, '');
+}
+
+// Mesma validação para qualquer planilha de bairros — a da Beer Flow ou a de
+// um distribuidor: f = { bairros, calendario }. Devolve também a linha do
+// bairro (entry), usada depois no pedido mínimo da data.
+function mcValidarNaFonte(f, bairro, isoDate, cidade) {
   // Falha definitiva — deixa passar com aviso interno
-  if (bairrosData === 'ERRO') {
-    return { ok: true, frete: 0, aviso: 'erro_carga' };
+  if (f.bairros === 'ERRO') {
+    return { ok: true, frete: 0, aviso: 'erro_carga', entry: null };
   }
   // Ainda carregando (bairros, ou o calendário quando já há data escolhida)
-  if (!bairrosData || (isoDate && calendarioData === null)) {
+  if (!f.bairros || (isoDate && f.calendario === null)) {
     return { ok: false, frete: 0, aviso: 'carregando' };
   }
-  var key   = bairro.toLowerCase().trim();
-  var keySA = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  var entry = bairrosData[key] || bairrosData[keySA];
+  var entry = mcAcharEntrada(f.bairros, bairro, cidade);
   if (!entry) return { ok: false, frete: 0, aviso: 'nao_cadastrado' };
-  if (!entry.atende) return { ok: false, frete: 0, aviso: 'nao_atende' };
+  if (!entry.atende) return { ok: false, frete: 0, aviso: 'nao_atende', entry: entry };
 
   var frete = entry.frete || 0;
   if (isoDate) {
     var regras = mcRegrasDoDia(isoDate, entry);
     var bloqueio = mcRegraVencedora(regras.filter(function(r) { return r.acao === 'bloquear' || r.acao === 'liberar'; }));
     if (bloqueio && bloqueio.acao === 'bloquear') {
-      return { ok: false, frete: 0, aviso: 'bloqueado_data' };
+      return { ok: false, frete: 0, aviso: 'bloqueado_data', entry: entry };
     }
     var tabela = mcRegraVencedora(regras.filter(function(r) { return r.acao === 'tabela'; }));
     if (tabela) {
@@ -2405,7 +2423,366 @@ function validarBairro(bairro, isoDate) {
       } // célula vazia na coluna extra = frete padrão
     }
   }
-  return { ok: true, frete: frete, aviso: null };
+  return { ok: true, frete: frete, aviso: null, entry: entry };
+}
+
+// Linha do bairro numa planilha de bairros. Planilha da Beer Flow: pelo nome
+// do bairro, exatamente como sempre foi. Planilha de distribuidor (tem a
+// coluna MUNICÍPIO): pelo município + bairro, com ou sem o "(...)" do ViaCEP.
+function mcAcharEntrada(mapa, bairro, cidade) {
+  if (!mapa || mapa === 'ERRO' || !bairro) return null;
+  if (mapa.__porMunicipio && cidade) {
+    var mun = mcNorm(mcLimparCidade(cidade));
+    return mapa[mun + '|' + mcNorm(bairro)] ||
+           mapa[mun + '|' + mcNorm(String(bairro).replace(/\([^)]*\)/g, ' '))] || null;
+  }
+  var key   = String(bairro).toLowerCase().trim();
+  var keySA = key.normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return mapa[key] || mapa[keySA] || null;
+}
+
+// "Rio de Janeiro – RJ" → "Rio de Janeiro" (mesma regra do backend).
+function mcLimparCidade(s) {
+  return String(s == null ? '' : s).replace(/\s*[-–—\/,]\s*[A-Za-z]{2}\s*$/, '').trim();
+}
+
+// ============================================================
+//  DISTRIBUIDORES — quem atende o endereço do evento (20/10/2026)
+//  Planilha "Territórios Distribuidores" (só a Beer Flow edita; leitura
+//  por link), três abas:
+//   • Distribuidores: código, nome no site, razão social, documento,
+//     WhatsApp, sede, link da planilha de bairros, ATIVO NO SITE.
+//   • Territorios: município + bairro → código. '*' = município inteiro;
+//     a primeira linha de cada bairro vale; NENHUM = ninguém atende.
+//   • Produtos: quais barris cada distribuidor tem (Sim/Não).
+//  A regra de "quem é o dono" é a MESMA do backend (dstRotaDoPedido_ no
+//  Distribuidores.gs): o que não for de distribuidor ATIVO fica com a Beer
+//  Flow, exatamente como sempre foi.
+//  Distribuidor ativo: frete, bloqueios e pedido mínimo vêm da planilha
+//  DELE (abas Bairros e Calendario); o WhatsApp do site passa a ser o dele;
+//  o pedido é só por WhatsApp (sem pagamento online); o Termo sai com os
+//  dados dele como CONTRATADA.
+//  RESERVA BEER FLOW: se o distribuidor não tem um barril do pedido, está
+//  sem atendimento na data ou não atende o bairro, o site tenta a planilha
+//  da Beer Flow (bairro com "Sim" e sem bloqueio na data). Se a Beer Flow
+//  atende, o pedido INTEIRO fica com ela — frete dela, WhatsApp dela,
+//  pagamento online quando disponível — e o backend marca o e-mail interno
+//  com "[Reserva]". A reserva só vale nos municípios atendidos pela Beer
+//  Flow (MC_MUNICIPIOS_BEERFLOW): a planilha dela não tem coluna de
+//  município, e o "Centro" de Angra não pode cair no "Centro" do Rio.
+//  Falha de rede nunca trava o site: sem a planilha de territórios, tudo
+//  segue com a Beer Flow, como antes.
+// ============================================================
+var MC_TERRITORIOS_ID      = '17STDV9lGbKDYjMSAAx8sWehsEYN0qTeZCGn51kwX0Ns';
+var MC_DIST_PADRAO         = 'BEERFLOW';
+var MC_MUNICIPIOS_BEERFLOW = ['rio de janeiro', 'niteroi']; // sem acento, minúsculo
+var MC_GVIZ_TIMEOUT_MS     = 15000;
+
+var mcTerr   = { dist: null, terr: null, prod: null }; // null = carregando | objeto | 'ERRO'
+var mcFontes = {}; // código do distribuidor → { bairros, calendario } da planilha dele
+
+// Lê uma aba de planilha pelo gviz (JSONP). Nunca trava: erro ou demora
+// além do limite = aoFalhar(). Depois de qualquer resposta, reavalia o
+// endereço se o cliente estiver na etapa Endereço.
+function mcGviz(chave, aba, nomeCallback, aoReceber, aoFalhar) {
+  var respondeu = false;
+  var timer = setTimeout(function() {
+    if (respondeu) return;
+    respondeu = true;
+    console.warn('[' + aba + '] sem resposta em ' + (MC_GVIZ_TIMEOUT_MS / 1000) + 's — seguindo sem ela.');
+    aoFalhar();
+    mcReavaliarEndereco();
+  }, MC_GVIZ_TIMEOUT_MS);
+  window[nomeCallback] = function(resp) {
+    respondeu = true;
+    clearTimeout(timer);
+    try {
+      if (!resp || !resp.table) throw new Error('Resposta sem dados');
+      aoReceber(resp.table);
+    } catch (err) {
+      console.warn('[' + aba + '] Erro ao processar:', err);
+      aoFalhar();
+    }
+    mcReavaliarEndereco();
+  };
+  var script = document.createElement('script');
+  script.src = 'https://docs.google.com/spreadsheets/d/' + chave +
+               '/gviz/tq?sheet=' + encodeURIComponent(aba) +
+               '&tqx=responseHandler:' + nomeCallback + '&headers=1';
+  script.onerror = function() {
+    if (respondeu) return;
+    respondeu = true;
+    clearTimeout(timer);
+    console.warn('[' + aba + '] ✗ Falha ao carregar.');
+    aoFalhar();
+    mcReavaliarEndereco();
+  };
+  document.head.appendChild(script);
+}
+
+function mcReavaliarEndereco() {
+  if (typeof mcCurrentStep === 'undefined' || mcCurrentStep !== 2) return;
+  var el = document.getElementById('bairro');
+  if (el && el.value.trim()) mcAvaliarBairro(true);
+}
+
+// { papel: 'trecho do cabeçalho' } → { papel: índice da coluna }
+function mcColunas(nomes, papeis) {
+  var col = {};
+  nomes.forEach(function(n, i) {
+    if (!n) return;
+    for (var k in papeis) {
+      if (col[k] == null && n.indexOf(papeis[k]) >= 0) { col[k] = i; return; }
+    }
+  });
+  return col;
+}
+
+function mcCelula(cells, i) {
+  var c = (i != null && cells) ? cells[i] : null;
+  return (c && c.v != null) ? c.v : '';
+}
+
+function mcCarregarTerritorios() {
+  mcGviz(MC_TERRITORIOS_ID, 'Distribuidores', 'gvizTerrDistribuidores',
+    function(t) { mcTerr.dist = mcParseDistribuidores(t); console.log('[Territórios] ✓ ' + Object.keys(mcTerr.dist).length + ' distribuidores.'); },
+    function()  { mcTerr.dist = 'ERRO'; });
+  mcGviz(MC_TERRITORIOS_ID, 'Territorios', 'gvizTerrTerritorios',
+    function(t) { mcTerr.terr = mcParseTerritorios(t); console.log('[Territórios] ✓ ' + Object.keys(mcTerr.terr).length + ' municípios.'); },
+    function()  { mcTerr.terr = 'ERRO'; });
+  mcGviz(MC_TERRITORIOS_ID, 'Produtos', 'gvizTerrProdutos',
+    function(t) { mcTerr.prod = mcParseProdutos(t); },
+    function()  { mcTerr.prod = 'ERRO'; });
+}
+
+function mcParseDistribuidores(table) {
+  var cab = mcCabecalhoGviz(table, 'codigo');
+  if (!cab) throw new Error('Cabeçalho da aba Distribuidores não encontrado');
+  var col = mcColunas(cab.nomes, {
+    codigo: 'codigo', nome: 'nome no site', razao: 'razao', documento: 'documento',
+    whatsapp: 'whatsapp', sede: 'endereco', planilha: 'planilha', ativo: 'ativo'
+  });
+  var out = {}, rows = table.rows || [];
+  for (var i = cab.inicio; i < rows.length; i++) {
+    var c = rows[i].c || [];
+    var cod = String(mcCelula(c, col.codigo)).trim().toUpperCase();
+    if (!cod) continue;
+    var link = String(mcCelula(c, col.planilha));
+    var mId = link.match(/\/d\/([a-zA-Z0-9_-]{20,})/);
+    out[cod] = {
+      codigo:     cod,
+      nome:       String(mcCelula(c, col.nome)).trim() || cod,
+      razao:      String(mcCelula(c, col.razao)).trim(),
+      documento:  String(mcCelula(c, col.documento)).trim(),
+      whatsapp:   String(mcCelula(c, col.whatsapp)).replace(/\D/g, ''),
+      sede:       String(mcCelula(c, col.sede)).trim(),
+      planilhaId: mId ? mId[1] : '',
+      ativo:      ['sim', 's', 'true', 'ativo'].indexOf(mcNorm(mcCelula(c, col.ativo))) !== -1
+    };
+  }
+  return out;
+}
+
+// { municipio: { todos: código, b: { bairro: código } } } — a 1ª linha vale.
+function mcParseTerritorios(table) {
+  var cab = mcCabecalhoGviz(table, 'municipio');
+  if (!cab) throw new Error('Cabeçalho da aba Territorios não encontrado');
+  var col = mcColunas(cab.nomes, { municipio: 'municipio', bairro: 'bairro', dist: 'distribuidor' });
+  var out = {}, rows = table.rows || [];
+  for (var i = cab.inicio; i < rows.length; i++) {
+    var c = rows[i].c || [];
+    var mun  = mcNorm(mcLimparCidade(mcCelula(c, col.municipio)));
+    var bai  = String(mcCelula(c, col.bairro)).trim();
+    var dono = String(mcCelula(c, col.dist)).trim().toUpperCase();
+    if (!mun || !bai || !dono) continue;
+    if (!out[mun]) out[mun] = { todos: '', b: {} };
+    if (bai === '*') { if (!out[mun].todos) out[mun].todos = dono; }
+    else {
+      var kb = mcNorm(bai);
+      if (!out[mun].b[kb]) out[mun].b[kb] = dono;
+    }
+  }
+  return out;
+}
+
+// { 'produto|litros': { CODIGO: true/false } } — também pelo nome do chope.
+function mcParseProdutos(table) {
+  var cab = mcCabecalhoGviz(table, 'produto');
+  if (!cab) throw new Error('Cabeçalho da aba Produtos não encontrado');
+  var col = mcColunas(cab.nomes, { produto: 'produto', nome: 'nome', litros: 'litros' });
+  var codigos = [];
+  cab.nomes.forEach(function(n, i) {
+    if (n && i !== col.produto && i !== col.nome && i !== col.litros) codigos.push({ i: i, cod: n.toUpperCase() });
+  });
+  var out = {}, rows = table.rows || [];
+  for (var r = cab.inicio; r < rows.length; r++) {
+    var c = rows[r].c || [];
+    var litros = parseInt(String(mcCelula(c, col.litros)).replace(/\D/g, ''), 10);
+    if (!litros) continue;
+    var linha = {};
+    codigos.forEach(function(k) { linha[k.cod] = mcNorm(mcCelula(c, k.i)).charAt(0) === 's'; });
+    var p = mcNorm(mcCelula(c, col.produto)), nome = mcNorm(mcCelula(c, col.nome));
+    if (p) out[p + '|' + litros] = linha;
+    if (nome) out[nome + '|' + litros] = linha;
+  }
+  return out;
+}
+
+// Dono do endereço — espelho do dstRotaDoPedido_ do backend.
+function mcRotaSite(cidade, bairro) {
+  if (mcTerr.dist === 'ERRO' || mcTerr.terr === 'ERRO') return { codigo: MC_DIST_PADRAO, dono: '', motivo: 'erro_leitura' };
+  if (!mcTerr.dist || !mcTerr.terr) return { codigo: '', dono: '', motivo: 'carregando' };
+  var mun = mcTerr.terr[mcNorm(mcLimparCidade(cidade))];
+  var dono = '';
+  if (mun) {
+    dono = mun.b[mcNorm(bairro)] || mun.b[mcNorm(String(bairro || '').replace(/\([^)]*\)/g, ' '))] || mun.todos || '';
+  }
+  if (!dono || dono === 'NENHUM' || dono === MC_DIST_PADRAO) return { codigo: MC_DIST_PADRAO, dono: dono, motivo: dono ? 'dono' : 'sem_territorio' };
+  var info = mcTerr.dist[dono];
+  if (!info)       return { codigo: MC_DIST_PADRAO, dono: dono, motivo: 'codigo_desconhecido' };
+  if (!info.ativo) return { codigo: MC_DIST_PADRAO, dono: dono, motivo: 'inativo' };
+  return { codigo: dono, dono: dono, info: info, motivo: 'ativo' };
+}
+
+// Planilha de bairros + calendário de um distribuidor (carrega na 1ª vez).
+function mcFonte(cod) {
+  if (mcFontes[cod]) return mcFontes[cod];
+  var f = mcFontes[cod] = { bairros: null, calendario: null };
+  var info = mcTerr.dist && mcTerr.dist !== 'ERRO' ? mcTerr.dist[cod] : null;
+  if (!info || !info.planilhaId) {
+    console.warn('[Distribuidor ' + cod + '] sem link da planilha de bairros na aba Distribuidores.');
+    f.bairros = 'ERRO'; f.calendario = [];
+    return f;
+  }
+  mcGviz(info.planilhaId, 'Bairros', 'gvizBairros_' + cod,
+    function(t) {
+      var m = parseGvizTable(t, cod);
+      if (!Object.keys(m).length) throw new Error('nenhum bairro na planilha');
+      f.bairros = m;
+    },
+    function() { f.bairros = 'ERRO'; });
+  mcGviz(info.planilhaId, 'Calendario', 'gvizCalendario_' + cod,
+    function(t) { f.calendario = parseGvizCalendario(t); },
+    function()  { f.calendario = 'ERRO'; });
+  return f;
+}
+
+// Calendário que vale para uma linha de bairro: o do distribuidor dono da
+// planilha, ou o da Beer Flow.
+function mcCalendarioDa(entry) {
+  if (entry && entry.fonte && mcFontes[entry.fonte]) return mcFontes[entry.fonte].calendario;
+  return calendarioData;
+}
+
+// Barris do pedido que o distribuidor NÃO tem (aba Produtos). Item que não
+// está na aba, ou aba que não carregou = disponível (o distribuidor confirma).
+function mcItensFaltando(cod) {
+  if (!mcTerr.prod || mcTerr.prod === 'ERRO' || !order.beers) return [];
+  var out = [];
+  BEER_CATALOG.forEach(function(beer) {
+    beer.sizes.forEach(function(sz) {
+      if (!((order.beers[beer.id + '_' + sz.l] || 0) > 0)) return;
+      var linha = mcTerr.prod[mcNorm(beer.id) + '|' + sz.l] || mcTerr.prod[mcNorm(beer.name) + '|' + sz.l];
+      if (linha && linha[cod] === false) out.push(beer.name + ' ' + sz.l + ' L');
+    });
+  });
+  return out;
+}
+
+// A Beer Flow pode ficar com o pedido como reserva?
+function mcReservaBeerFlow(cidade, bairro, isoDate) {
+  if (MC_MUNICIPIOS_BEERFLOW.indexOf(mcNorm(mcLimparCidade(cidade))) < 0) return { ok: false, frete: 0, aviso: 'fora_do_municipio' };
+  var v = validarBairro(bairro, isoDate);
+  if (v.aviso === 'erro_carga') return { ok: false, frete: 0, aviso: 'erro_carga' }; // sem a planilha, não dá para confirmar
+  return v;
+}
+
+// Quem atende este endereço nesta data, com este pedido.
+// Devolve { ok, frete, aviso, entry, codigo, info, dono, reserva, faltando }.
+function mcAtendimento(bairro, isoDate) {
+  var cidadeEl = document.getElementById('cidadeEstado');
+  var cidade = cidadeEl ? cidadeEl.value : '';
+  var rota = mcRotaSite(cidade, bairro);
+  if (rota.motivo === 'carregando') return { ok: false, frete: 0, aviso: 'carregando' };
+
+  if (rota.codigo === MC_DIST_PADRAO) {
+    var v = validarBairro(bairro, isoDate);
+    v.codigo = MC_DIST_PADRAO;
+    v.dono = rota.dono || '';
+    return v;
+  }
+
+  var cod = rota.codigo;
+  var vd = mcValidarNaFonte(mcFonte(cod), bairro, isoDate, cidade);
+  if (vd.aviso === 'carregando' || mcTerr.prod === null) return { ok: false, frete: 0, aviso: 'carregando' };
+  var faltando = mcItensFaltando(cod);
+  if (vd.ok && !faltando.length) {
+    return { ok: true, frete: vd.frete, aviso: vd.aviso, entry: vd.entry, codigo: cod, info: rota.info, dono: cod };
+  }
+
+  // O distribuidor não consegue atender: tenta a Beer Flow antes de negar.
+  var motivo = !vd.ok ? (vd.aviso === 'bloqueado_data' ? 'data' : 'bairro') : 'produto';
+  var vb = mcReservaBeerFlow(cidade, bairro, isoDate);
+  if (vb.aviso === 'carregando') return vb;
+  if (vb.ok) {
+    return { ok: true, frete: vb.frete, aviso: null, entry: vb.entry, codigo: MC_DIST_PADRAO, dono: cod,
+             reserva: motivo, faltando: motivo === 'produto' ? faltando : [] };
+  }
+  if (!vd.ok) return { ok: false, frete: 0, aviso: vd.aviso, codigo: cod, info: rota.info, dono: cod };
+  return { ok: false, frete: 0, aviso: 'produto_indisponivel', faltando: faltando, codigo: cod, info: rota.info, dono: cod };
+}
+
+// Guarda no pedido quem atende e ajusta WhatsApp e Termo.
+function mcAplicarAtendimento(a, bairro) {
+  var antes = order.distribuidor || MC_DIST_PADRAO;
+  if (a && a.ok) {
+    order.__atend        = { bairro: bairro, entry: a.entry || null };
+    order.distribuidor   = a.codigo || MC_DIST_PADRAO;
+    order.reserva        = a.reserva || '';
+    order.reservaItens   = (a.faltando || []).join('; ');
+  } else {
+    order.__atend        = null;
+    order.distribuidor   = MC_DIST_PADRAO;
+    order.reserva        = '';
+    order.reservaItens   = '';
+  }
+  order.donoTerritorio   = (a && a.dono) || '';
+  // WhatsApp da região: o do distribuidor quando o endereço é dele (mesmo se
+  // ele não puder atender este pedido); o da Beer Flow na reserva e no resto.
+  order.whatsDist        = (a && a.codigo && a.codigo !== MC_DIST_PADRAO && a.info) ? a.info.whatsapp : '';
+  order.distribuidorNome = (a && a.ok && a.codigo !== MC_DIST_PADRAO && a.info) ? a.info.nome : '';
+  if (order.distribuidor !== antes && order.termoAceito) mcInvalidarTermo();
+  mcAtualizarWhatsApp();
+}
+
+function mcEhDistribuidor() {
+  return !!order.distribuidor && order.distribuidor !== MC_DIST_PADRAO;
+}
+
+function mcWhatsAtual() {
+  return order.whatsDist || WHATSAPP_NUMBER;
+}
+
+function mcAtualizarWhatsApp() {
+  var a = document.querySelector('.float-wa');
+  if (a) a.href = 'https://wa.me/' + mcWhatsAtual() + '?text=' + encodeURIComponent('Olá! Gostaria de tirar uma dúvida sobre a Mistura Clássica.');
+}
+
+function mcMsgProdutoIndisponivel(lista, bairro) {
+  var estilo = 'font-weight:700;text-decoration:underline;';
+  var itens = (lista || []).join(', ');
+  var txt = (lista && lista.length > 1)
+    ? 'Os barris <strong>' + itens + '</strong> não estão disponíveis'
+    : 'O barril <strong>' + itens + '</strong> não está disponível';
+  return txt + ' para entrega em <strong>' + bairro + '</strong> em ' + mcDataBR(order.eventDate) + '. ' +
+         '<a href="#" onclick="goToStep(3); return false;" style="' + estilo + '">Ajustar os barris</a> ou ' +
+         '<a href="#" onclick="goToStep(4); return false;" style="' + estilo + '">escolher outra data</a>.';
+}
+
+function mcEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(ch) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+  });
 }
 
 // ============================================================
@@ -2548,13 +2925,14 @@ function parseGvizCalendario(table) {
 
 // Regras que valem para essa data e esse bairro, com a força (especificidade).
 function mcRegrasDoDia(isoDate, entry) {
-  if (!Array.isArray(calendarioData) || !isoDate) return [];
+  var cal = mcCalendarioDa(entry); // calendário do distribuidor dono da linha, ou o da Beer Flow
+  if (!Array.isArray(cal) || !isoDate) return [];
   var p = isoDate.split('-');
   if (p.length !== 3) return [];
   var dataNum = +p[0] * 10000 + +p[1] * 100 + +p[2];
   var diaSemana = new Date(+p[0], +p[1] - 1, +p[2]).getDay();
   var out = [];
-  calendarioData.forEach(function(r) {
+  cal.forEach(function(r) {
     if (dataNum < r.ini || dataNum > r.fim) return;
     if (r.dias && !r.dias[diaSemana]) return;
     var forca = 0;
@@ -2606,6 +2984,10 @@ function mcDataBR(isoDate) {
 
 // Linha da aba Bairros para o nome informado (ou null se não achou/carregou).
 function mcEntradaBairro(bairro) {
+  // Endereço já avaliado: vale a linha de quem vai atender (distribuidor ou Beer Flow)
+  if (bairro && order.__atend && order.__atend.entry && mcNorm(order.__atend.bairro) === mcNorm(bairro)) {
+    return order.__atend.entry;
+  }
   if (!bairro || !bairrosData || bairrosData === 'ERRO') return null;
   var key   = String(bairro).toLowerCase().trim();
   var keySA = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -2626,7 +3008,8 @@ function mcMinimoLitros(isoDate, entry) {
   // "Somente Barris" não usa chopeira: sem mínimo, e as regras MINIMO não se aplicam.
   if (order.service !== 'kit') return { litros: 0, porData: false };
   var res = { litros: MC_MIN_LITROS_PADRAO, porData: false };
-  if (!isoDate || !Array.isArray(calendarioData)) return res;
+  var cal = mcCalendarioDa(entry);
+  if (!isoDate || !Array.isArray(cal)) return res;
 
   var soMinimo = function(r) { return r.acao === 'minimo'; };
   var vence = mcRegraVencedora(mcRegrasDoDia(isoDate, entry || { regiao: '', chave: '' }).filter(soMinimo));
@@ -2637,7 +3020,7 @@ function mcMinimoLitros(isoDate, entry) {
   if (p.length !== 3) return res;
   var dataNum = +p[0] * 10000 + +p[1] * 100 + +p[2];
   var diaSemana = new Date(+p[0], +p[1] - 1, +p[2]).getDay();
-  calendarioData.forEach(function(r) {
+  cal.forEach(function(r) {
     if (r.acao !== 'minimo' || r.tipo === 'todos') return;
     if (dataNum < r.ini || dataNum > r.fim) return;
     if (r.dias && !r.dias[diaSemana]) return;
@@ -3047,6 +3430,7 @@ function pagamentoBloqueadoPorAntecedencia(isoDate) {
 }
 
 function pagamentoOnlineDisponivel() {
+  if (mcEhDistribuidor()) return false; // distribuidor: pedido só pelo WhatsApp (pagamento combinado com ele)
   if (pedidoTemBarrilPequeno()) return false;
   if (dataDePagamentoBloqueada(order.eventDate)) return false;
   if (pagamentoBloqueadoPorAntecedencia(order.eventDate)) return false;
@@ -3494,10 +3878,17 @@ function goToStep3() {
   order.localInstalacao = document.getElementById('localInstalacao').value;
   order.localOutros = document.getElementById('localOutros').value.trim();
 
-  // Validate neighbourhood
-  var validacao = validarBairro(bairro, order.eventDate);
+  // Quem atende (Beer Flow, distribuidor ou Beer Flow como reserva) e se atende
+  var validacao = mcAtendimento(bairro, order.eventDate);
+  if (validacao.aviso !== 'carregando') mcAplicarAtendimento(validacao, bairro);
   if (!validacao.ok) {
     var msg;
+    if (validacao.aviso === 'produto_indisponivel') {
+      showErr('err-bairro', 'x');
+      document.getElementById('err-bairro').innerHTML = mcMsgProdutoIndisponivel(validacao.faltando, bairro);
+      document.getElementById('err-bairro').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     if (validacao.aviso === 'bloqueado_data') {
       showErr('err-bairro', 'x');
       document.getElementById('err-bairro').innerHTML = mcMsgBloqueioData(bairro);
@@ -3562,10 +3953,23 @@ function mcAvaliarBairro(silencioso) {
   var titl = document.getElementById('cobertura-title');
   var text = document.getElementById('cobertura-text');
 
-  if (!bairro) { box.style.display = 'none'; return; }
+  if (!bairro) { box.style.display = 'none'; mcAplicarAtendimento(null, ''); return; }
 
-  var v = validarBairro(bairro, order.eventDate);
+  var v = mcAtendimento(bairro, order.eventDate);
   box.classList.remove('is-ok', 'is-warn', 'is-err');
+
+  // Planilha ainda carregando: mostra "verificando" e tenta de novo
+  if (v.aviso === 'carregando') {
+    box.classList.add('is-warn');
+    icon.textContent = '⏳';
+    titl.textContent = 'Verificando área de atendimento...';
+    text.textContent = 'Só um instante — estamos consultando a cobertura de entrega para ' + bairro + '.';
+    box.style.display = 'flex';
+    if (!silencioso) setTimeout(function() { mcAvaliarBairro(true); }, 1500);
+    return;
+  }
+
+  mcAplicarAtendimento(v, bairro);
 
   // Região/bairro sem atendimento NA DATA escolhida (aba Calendario)
   if (v.aviso === 'bloqueado_data') {
@@ -3579,14 +3983,15 @@ function mcAvaliarBairro(silencioso) {
     return;
   }
 
-  // Planilha ainda carregando: mostra "verificando" e tenta de novo
-  if (v.aviso === 'carregando') {
-    box.classList.add('is-warn');
-    icon.textContent = '⏳';
-    titl.textContent = 'Verificando área de atendimento...';
-    text.textContent = 'Só um instante — estamos consultando a cobertura de entrega para ' + bairro + '.';
+  // Barril do pedido que ninguém tem para esse endereço nessa data
+  if (v.aviso === 'produto_indisponivel') {
+    box.classList.add('is-err');
+    icon.textContent = '🍺';
+    titl.textContent = 'Item indisponível na sua região';
+    text.innerHTML = mcMsgProdutoIndisponivel(v.faltando, bairro);
     box.style.display = 'flex';
-    if (!silencioso) setTimeout(function() { mcAvaliarBairro(true); }, 1500);
+    order.freteExtra = 0;
+    updateBeerSubtotal();
     return;
   }
 
@@ -3629,9 +4034,11 @@ function mcAvaliarBairro(silencioso) {
     titl.textContent = 'Entregamos em ' + bairro + '!';
     text.innerHTML = 'Entrega <strong>sem custo de frete</strong> para este bairro.';
   }
+  if (order.distribuidorNome) {
+    text.innerHTML += '<br>Seu pedido será atendido pela <strong>' + mcEsc(order.distribuidorNome) + '</strong>.';
+  }
   box.style.display = 'flex';
 }
-
 
 // ============================================================
 //  STEP 3 – Data & Entrega
@@ -4459,7 +4866,12 @@ function registrarPedido(origem) {
         termo_versao: order.termoVersao || '',
         termo_datahora: order.termoDataHora || '',
         termo_timestamp_utc: order.termoTimestampISO || '',
-        termo_dispositivo: order.termoDispositivo || ''
+        termo_dispositivo: order.termoDispositivo || '',
+        // Quem atende (o backend confere pela planilha de territórios; só
+        // aceita do site a escolha da Beer Flow como reserva)
+        distribuidor: order.distribuidor || 'BEERFLOW',
+        reserva_motivo: order.reserva || '',
+        reserva_itens: order.reservaItens || ''
       });
     } catch (e) { /* nunca interrompe a navegacao */ }
   }
@@ -4688,7 +5100,7 @@ function sendWhatsapp() {
   if (order.nome) msg += 'Nome: ' + order.nome + '\n';
   msg += '\nJá tenho os detalhes do pedido comigo. Pode me confirmar os próximos passos? Obrigado! 😊';
 
-  const url = 'https://wa.me/' + WHATSAPP_NUMBER + '?text=' + encodeURIComponent(msg);
+  const url = 'https://wa.me/' + mcWhatsAtual() + '?text=' + encodeURIComponent(msg);
   window.open(url, '_blank');
 }
 
@@ -4700,6 +5112,59 @@ function sendWhatsapp() {
 var MC_TERMO_VERSAO = '1.0';
 var mcTermoAcaoPendente = null;
 
+// ----- Termo por distribuidor (20/10/2026) -----
+// Em pedido de distribuidor, a CONTRATADA do Termo é o distribuidor (razão
+// social, documento e sede da aba Distribuidores); o resto do texto é o
+// mesmo. A versão registrada leva o código: "1.0-COSTAVERDE". Pedido da
+// Beer Flow (inclusive reserva) continua exatamente como antes: "1.0".
+var mcTermoContratadaOriginal = null;
+
+function mcTermoVersaoAtual() {
+  return MC_TERMO_VERSAO + (mcEhDistribuidor() ? '-' + order.distribuidor : '');
+}
+
+function mcContratadaHTML(info) {
+  var nome = String(info.razao || info.nome || info.codigo).replace(/\s*\(pessoa f[ií]sica\)\s*/i, ' ').trim();
+  var doc  = String(info.documento || '');
+  var cnpj = doc.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+  var cpf  = cnpj ? null : doc.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/);
+  var ident = cnpj
+    ? mcEsc(nome.toUpperCase()) + ', pessoa jurídica de direito privado inscrita no CNPJ sob o nº ' + mcEsc(cnpj[0]) +
+      (info.sede ? ', com sede em ' + mcEsc(info.sede) : '')
+    : mcEsc(nome.toUpperCase()) + ', pessoa física' +
+      (cpf ? ' inscrita no CPF sob o nº ' + mcEsc(cpf[0]) : '') +
+      (info.sede ? ', com endereço comercial em ' + mcEsc(info.sede) : '');
+  return '<strong>CONTRATADA:</strong> ' + ident +
+         ', distribuidora autorizada da marca <strong>MISTURA CLÁSSICA</strong>, responsável pelo fornecimento, ' +
+         'entrega, instalação, suporte e recolha deste pedido na região do evento. O site deliverymistura.com.br é ' +
+         'operado pela BEER FLOW DISTRIBUIDORA LTDA (CNPJ 28.932.601/0001-51), que recebe o pedido e repassa à ' +
+         'CONTRATADA os dados necessários à sua execução.';
+}
+
+function mcAtualizarContratadaTermo() {
+  var p = document.getElementById('termoContratada');
+  if (!p) return;
+  if (mcTermoContratadaOriginal === null) mcTermoContratadaOriginal = p.innerHTML;
+  var info = (mcEhDistribuidor() && mcTerr.dist && mcTerr.dist !== 'ERRO') ? mcTerr.dist[order.distribuidor] : null;
+  p.innerHTML = info ? mcContratadaHTML(info) : mcTermoContratadaOriginal;
+}
+
+// O endereço mudou de quem atende depois do aceite: o aceite era de outra
+// CONTRATADA, então precisa aceitar de novo.
+function mcInvalidarTermo() {
+  order.termoAceito = false;
+  order.termoVersao = '';
+  order.termoDataHora = '';
+  order.termoTimestampISO = '';
+  order.termoDispositivo = '';
+  mcAtualizarSeloTermo();
+  var aviso = document.getElementById('aceite-aviso');
+  if (aviso && window.__mcAvisoTermoOriginal) {
+    aviso.classList.remove('is-ok');
+    aviso.innerHTML = window.__mcAvisoTermoOriginal;
+  }
+}
+
 // Retorna true se o termo já foi aceito; caso contrário abre o modal e retorna false.
 function mcTermoRequerido(acao) {
   if (order.termoAceito) return true;
@@ -4709,6 +5174,7 @@ function mcTermoRequerido(acao) {
 
 function mcAbrirTermo(acao) {
   mcTermoAcaoPendente = acao || null;
+  mcAtualizarContratadaTermo();
   var ov = document.getElementById('termoOverlay');
   if (!ov) return;
   var chk  = document.getElementById('termoCheck');
@@ -4730,7 +5196,7 @@ function mcAbrirTermo(acao) {
     // Se o texto couber inteiro na tela, libera o aceite de imediato
     setTimeout(function () { mcTermoScroll(); }, 60);
   }
-  mcTrack('termo_aberto', { numero_pedido: order.numeroPedido || '', versao: MC_TERMO_VERSAO });
+  mcTrack('termo_aberto', { numero_pedido: order.numeroPedido || '', versao: mcTermoVersaoAtual() });
 }
 
 function mcFecharTermo() {
@@ -4785,7 +5251,7 @@ function mcAceitarTermo() {
   var d = new Date();
   var p = function (n) { return String(n).padStart(2, '0'); };
   order.termoAceito       = true;
-  order.termoVersao       = MC_TERMO_VERSAO;
+  order.termoVersao       = mcTermoVersaoAtual();
   order.termoDataHora     = p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() +
                             ' às ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
   order.termoTimestampISO = d.toISOString();
@@ -4795,14 +5261,15 @@ function mcAceitarTermo() {
 
   var aviso = document.getElementById('aceite-aviso');
   if (aviso) {
+    if (!window.__mcAvisoTermoOriginal) window.__mcAvisoTermoOriginal = aviso.innerHTML;
     aviso.classList.add('is-ok');
     aviso.innerHTML = '✅ <strong>Termo de Responsabilidade aceito</strong> em ' + order.termoDataHora +
-                      ' (versão ' + MC_TERMO_VERSAO + '). O registro do aceite consta no seu comprovante.';
+                      ' (versão ' + order.termoVersao + '). O registro do aceite consta no seu comprovante.';
   }
 
   mcTrack('termo_aceito', {
     numero_pedido: order.numeroPedido || '',
-    versao: MC_TERMO_VERSAO,
+    versao: order.termoVersao,
     data_hora: order.termoTimestampISO
   });
 
@@ -4825,7 +5292,7 @@ function mcAtualizarSeloTermo() {
   sec.style.display = 'block';
   var h = '';
   h += resumoItem('Situação', 'Aceito eletronicamente pelo CONTRATANTE');
-  h += resumoItem('Versão do termo', MC_TERMO_VERSAO);
+  h += resumoItem('Versão do termo', order.termoVersao || MC_TERMO_VERSAO);
   h += resumoItem('Data e hora do aceite', order.termoDataHora);
   h += resumoItem('Aceito por', (order.nome || '—') + ' – ' + (order.documento || '—'));
   box.innerHTML = h;
@@ -5096,6 +5563,7 @@ function initConsentimento() {
   carregarDatas();
   carregarPrecos();
   carregarCalendario();
+  mcCarregarTerritorios(); // quem atende cada endereço (distribuidores)
   var __termoCorpo = document.getElementById('termoCorpo');
   if (__termoCorpo) __termoCorpo.addEventListener('scroll', mcTermoScroll);
   selectService('kit');      // padrão: chope + chopeira inclusa
