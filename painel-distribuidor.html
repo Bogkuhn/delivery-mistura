@@ -153,6 +153,8 @@
 
     .gestao { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
     .gestao-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .dica-repasse { font-size: 12.5px; color: var(--muted); margin: 0 0 10px; line-height: 1.45; }
+    .aviso-repasse { font-size: 13px; color: #5B3A8A; background: #EDE4F7; border-radius: 8px; padding: 9px 12px; margin: 0 0 10px; line-height: 1.45; }
     .gestao .form-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
     .gestao .form-input, .gestao .form-select { padding: 10px 11px; font-size: 14px; }
     .gestao-rodape { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
@@ -290,7 +292,7 @@ var DP_FILTRO_KEY = 'mc_dist_filtros';
 var dp = {
   perfil: null,
   pedidos: [],
-  situacoes: ['Novo', 'Em contato', 'Confirmado', 'Entregue', 'Concluído', 'Cancelado'],
+  situacoes: ['Novo', 'Em contato', 'Confirmado', 'Entregue', 'Concluído', 'Cancelado', 'Repassado à Beer Flow'],
   comissao: 0.07,
   distribuidores: [],
   filtro: { periodo: 'proximos', situacao: 'abertos', dist: '', busca: '', de: '', ate: '' }
@@ -303,8 +305,12 @@ var DP_CORES = {
   'Confirmado': { cor: '#1E4F8A', fundo: '#DFEBFA', barra: '#3B7DD8' },
   'Entregue':   { cor: '#1E6B3C', fundo: '#E4F5EA', barra: '#27AE60' },
   'Concluído':  { cor: '#5A5A5A', fundo: '#EFEFEF', barra: '#9A9A9A' },
-  'Cancelado':  { cor: '#8A1E1E', fundo: '#F7DADA', barra: '#C0392B' }
+  'Cancelado':  { cor: '#8A1E1E', fundo: '#F7DADA', barra: '#C0392B' },
+  'Repassado à Beer Flow': { cor: '#5B3A8A', fundo: '#EDE4F7', barra: '#8E5BC9' }
 };
+var DP_REPASSE = 'Repassado à Beer Flow';
+// Pedido que não conta no valor nem na comissão do distribuidor.
+function dpForaDaConta(p) { return p.situacao === 'Cancelado' || p.situacao === DP_REPASSE; }
 var DP_ABERTOS = ['Novo', 'Em contato', 'Confirmado'];
 
 // ================== COMUNICAÇÃO ==================
@@ -619,7 +625,7 @@ function dpRenderizar() {
 function dpRenderizarResumo(lista) {
   var n = lista.length;
   var novos = lista.filter(function (p) { return p.situacao === 'Novo'; }).length;
-  var validos = lista.filter(function (p) { return p.situacao !== 'Cancelado'; });
+  var validos = lista.filter(function (p) { return !dpForaDaConta(p); });
   var soma = 0, com = 0;
   validos.forEach(function (p) {
     var base = (p.valorFinal != null) ? p.valorFinal : (p.total || 0);
@@ -630,7 +636,7 @@ function dpRenderizarResumo(lista) {
   document.getElementById('resumo').innerHTML =
     dpResumoItem('Pedidos', n) +
     dpResumoItem('Novos (sem contato)', novos) +
-    dpResumoItem('Valor (sem cancelados)', dpBrl(soma)) +
+    dpResumoItem('Valor (sem cancelados/repassados)', dpBrl(soma)) +
     dpResumoItem('Comissão ' + dpPct(dp.comissao), dpBrl(com));
 
   var box = document.getElementById('porDist');
@@ -643,7 +649,7 @@ function dpRenderizarResumo(lista) {
     var o = porD[k];
     o.n++;
     if (DP_ABERTOS.indexOf(p.situacao) !== -1) o.abertos++;
-    if (p.situacao === 'Cancelado') { o.cancel++; return; }
+    if (dpForaDaConta(p)) { o.cancel++; return; }
     var base = (p.valorFinal != null) ? p.valorFinal : (p.total || 0);
     o.valor += base;
     o.com += (p.comissao != null) ? p.comissao : base * dp.comissao;
@@ -653,7 +659,7 @@ function dpRenderizarResumo(lista) {
   chaves.sort(function (a, b) { return porD[b].valor - porD[a].valor; });
 
   box.innerHTML = '<h2>Por distribuidor (filtro atual)</h2><table><thead><tr>' +
-    '<th>Distribuidor</th><th class="num">Pedidos</th><th class="num">Em aberto</th><th class="num">Cancelados</th>' +
+    '<th>Distribuidor</th><th class="num">Pedidos</th><th class="num">Em aberto</th><th class="num">Cancel./repass.</th>' +
     '<th class="num">Valor</th><th class="num">Comissão</th></tr></thead><tbody>' +
     chaves.map(function (k) {
       var o = porD[k];
@@ -683,6 +689,7 @@ function dpCardPedido(p) {
     return '<option value="' + dpEsc(s) + '"' + (s === p.situacao ? ' selected' : '') + '>' + dpEsc(s) + '</option>';
   }).join('');
   var valorFinalTxt = (p.valorFinal != null) ? dpNumBr(p.valorFinal) : '';
+  var repassado = p.situacao === DP_REPASSE;
   var info = [];
   info.push('Comissão: <b>' + dpBrl(p.comissao != null ? p.comissao : 0) + '</b>');
   if (p.atualizadoEm) info.push('Atualizado em ' + dpEsc(p.atualizadoEm) + (p.atualizadoPor ? ' por ' + dpEsc(p.atualizadoPor) : ''));
@@ -721,9 +728,13 @@ function dpCardPedido(p) {
     (p.resumo ? '<details class="resumo-pedido"><summary>Resumo completo do pedido</summary><pre>' + dpEsc(p.resumo) + '</pre></details>' : '') +
 
     '<div class="gestao">' +
+      (repassado
+        ? '<p class="aviso-repasse">Pedido repassado à Beer Flow' + (p.repassadoEm ? ' em ' + dpEsc(p.repassadoEm) : '') +
+          '. A partir de agora a Beer Flow atende este cliente; o pedido não entra na sua comissão.</p>'
+        : '<p class="dica-repasse">Não vai conseguir atender? Escolha <b>' + DP_REPASSE + '</b> e salve: o pedido passa para a Beer Flow.</p>') +
       '<div class="gestao-grade">' +
         '<div><label class="form-label" for="sit-' + id + '">Situação</label>' +
-          '<select class="form-select" id="sit-' + id + '">' + opcoes + '</select></div>' +
+          '<select class="form-select" id="sit-' + id + '"' + (repassado ? ' disabled' : '') + '>' + opcoes + '</select></div>' +
         '<div><label class="form-label" for="vf-' + id + '">Valor final cobrado (R$)</label>' +
           '<input class="form-input" id="vf-' + id + '" inputmode="decimal" placeholder="' + dpEsc(p.total != null ? dpNumBr(p.total) : '0,00') + '" value="' + dpEsc(valorFinalTxt) + '"></div>' +
       '</div>' +
@@ -760,6 +771,15 @@ function dpSalvarPedido(btn) {
     return;
   }
 
+  var atual = null;
+  for (var k = 0; k < dp.pedidos.length; k++) if (dp.pedidos[k].numero === numero) { atual = dp.pedidos[k]; break; }
+  if (situacao === DP_REPASSE && (!atual || atual.situacao !== DP_REPASSE)) {
+    var okRepasse = window.confirm('Repassar o pedido ' + numero + ' para a Beer Flow?\n\n' +
+      'A Beer Flow passa a atender este cliente e o pedido sai da sua comissão. ' +
+      'Isso não pode ser desfeito pelo painel.');
+    if (!okRepasse) return;
+  }
+
   btn.disabled = true;
   btn.textContent = 'Salvando…';
   msg.textContent = '';
@@ -773,7 +793,9 @@ function dpSalvarPedido(btn) {
         var erros = {
           valor_invalido: 'Valor final inválido.',
           situacao_invalida: 'Situação inválida.',
-          pedido_nao_encontrado: 'Pedido não encontrado.'
+          pedido_nao_encontrado: 'Pedido não encontrado.',
+          pedido_repassado: 'Este pedido já foi repassado à Beer Flow.',
+          teste_sem_repasse: 'Pedido de teste não pode ser repassado.'
         };
         msg.className = 'salvo-msg err';
         msg.textContent = erros[r.erro] || 'Não foi possível salvar.';
