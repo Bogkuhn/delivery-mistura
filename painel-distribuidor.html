@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel do Distribuidor — Mistura Clássica</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="data:,">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --gold: #C8922A;
+      --gold-light: #F0B840;
+      --dark: #1A0800;
+      --cream: #FBF7EF;
+      --white: #FFFFFF;
+      --text: #1C1C1C;
+      --muted: #6B6B6B;
+      --border: #E5DDD0;
+      --danger: #C0392B;
+      --success: #27AE60;
+      --radius: 14px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.10);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--cream); color: var(--text); min-height: 100vh; }
+    a { color: var(--gold); }
+    :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+    /* ========== HEADER ========== */
+    .dp-header {
+      background: var(--dark); color: var(--white); padding: 16px 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    .dp-brand { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 20px; letter-spacing: .3px; }
+    .dp-brand span { display: block; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 500; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold-light); margin-top: 2px; }
+    .dp-sessao { display: flex; align-items: center; gap: 12px; font-size: 13px; color: #E9DFCB; flex-wrap: wrap; }
+    .dp-sessao strong { color: var(--white); }
+    .dp-sessao button {
+      background: none; border: 1px solid rgba(255,255,255,0.35); color: var(--white);
+      padding: 7px 14px; border-radius: 30px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    .dp-sessao button:hover { border-color: var(--white); }
+
+    main { max-width: 920px; margin: 0 auto; padding: 28px 16px 60px; }
+    .login-wrap { max-width: 480px; margin: 0 auto; }
+
+    .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px 24px; }
+    .card-title { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 24px; margin-bottom: 6px; }
+    .card-subtitle { color: var(--muted); font-size: 14px; line-height: 1.5; margin-bottom: 22px; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 7px; }
+    .form-input, .form-select, .form-textarea {
+      width: 100%; padding: 12px 13px; border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: 15px; font-family: inherit; background: var(--white); color: var(--text);
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--gold); outline: none; }
+    .form-textarea { resize: vertical; min-height: 64px; font-size: 14px; }
+    #codigoInput { text-align: center; font-size: 26px; font-weight: 700; letter-spacing: 10px; padding-left: 8px; }
+
+    .form-msg { font-size: 13px; margin: 8px 0 12px; line-height: 1.5; }
+    .form-msg.err { color: var(--danger); }
+    .form-msg.ok { color: var(--success); }
+
+    .btn-primary {
+      width: 100%; background: var(--gold); color: var(--white); border: none;
+      padding: 14px; border-radius: 40px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+      transition: background .2s;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--gold-light); }
+    .btn-primary:disabled { opacity: .55; cursor: default; }
+    .btn-link { background: none; border: none; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 0; text-decoration: underline; font-family: inherit; }
+    .btn-link:hover { color: var(--gold); }
+    .btn-link:disabled { color: var(--border); cursor: default; text-decoration: none; }
+    .step-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; flex-wrap: wrap; gap: 8px; }
+
+    /* ========== BARRA DE FILTROS ========== */
+    .dp-topo { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .dp-topo h1 { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 24px; }
+    .dp-topo p { color: var(--muted); font-size: 14px; margin-top: 2px; }
+    .btn-atualizar {
+      background: var(--white); border: 1.5px solid var(--border); color: var(--text); padding: 9px 16px;
+      border-radius: 30px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+    }
+    .btn-atualizar:hover { border-color: var(--gold); color: var(--gold); }
+
+    .filtros { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-bottom: 16px; }
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+    .chip {
+      flex: 0 0 auto; background: var(--cream); border: 1.5px solid var(--border); color: var(--text);
+      padding: 8px 14px; border-radius: 30px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap;
+    }
+    .chip[aria-pressed="true"] { background: var(--dark); border-color: var(--dark); color: var(--gold-light); }
+    .filtros-linha { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 12px; }
+    .filtros-linha .form-label { font-size: 12px; margin-bottom: 4px; color: var(--muted); }
+    .filtros-linha .form-input, .filtros-linha .form-select { padding: 10px 11px; font-size: 14px; }
+    .periodo { display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .periodo.on { display: grid; }
+
+    .resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 18px; }
+    .resumo-item { background: var(--white); border-radius: 12px; border: 1px solid var(--border); padding: 12px 14px; }
+    .resumo-item small { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); }
+    .resumo-item strong { display: block; font-size: 20px; margin-top: 3px; font-variant-numeric: tabular-nums; }
+
+    .por-dist { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); padding: 14px 16px; margin-bottom: 18px; overflow-x: auto; }
+    .por-dist h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 8px; }
+    .por-dist table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .por-dist th, .por-dist td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .por-dist td.num, .por-dist th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .por-dist tr:last-child td { border-bottom: none; }
+
+    /* ========== CARD DO PEDIDO ========== */
+    .grupo-data { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .9px; color: var(--muted); margin: 22px 4px 10px; }
+    .grupo-data:first-child { margin-top: 0; }
+    .pedido { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); border-left: 5px solid var(--gold); padding: 18px 18px 16px; margin-bottom: 14px; }
+    .pedido-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 12px; flex-wrap: wrap; }
+    .pedido-id { min-width: 0; }
+    .pedido-cliente { font-size: 18px; font-weight: 700; line-height: 1.3; }
+    .pedido-meta { font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .pedido-meta b { color: var(--text); font-weight: 600; }
+    .pill { display: inline-block; flex: 0 0 auto; padding: 5px 12px; border-radius: 30px; font-size: 12px; font-weight: 700; line-height: 1.4; }
+    .tag-dist { display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #6b5418; background: #FFF4D6; padding: 3px 9px; border-radius: 20px; }
+
+    .pedido-acoes-contato { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 4px; }
+    .btn-wa {
+      display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: var(--white);
+      text-decoration: none; padding: 10px 16px; border-radius: 30px; font-size: 14px; font-weight: 700;
+    }
+    .btn-wa:hover { background: #128C7E; }
+    .btn-sec {
+      display: inline-flex; align-items: center; gap: 6px; background: var(--cream); border: 1.5px solid var(--border); color: var(--text);
+      text-decoration: none; padding: 9px 14px; border-radius: 30px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    .btn-sec:hover { border-color: var(--gold); }
+
+    .pedido-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 18px; margin-top: 14px; }
+    .campo small { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 3px; }
+    .campo div { font-size: 14px; line-height: 1.45; word-break: break-word; }
+    .campo .valor-grande { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    details.resumo-pedido { margin-top: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--cream); }
+    details.resumo-pedido summary { cursor: pointer; padding: 10px 14px; font-size: 13px; font-weight: 700; list-style: none; }
+    details.resumo-pedido summary::-webkit-details-marker { display: none; }
+    details.resumo-pedido summary::before { content: '▸ '; color: var(--gold); }
+    details.resumo-pedido[open] summary::before { content: '▾ '; }
+    details.resumo-pedido pre {
+      padding: 0 14px 14px; font-family: Consolas, Menlo, monospace; font-size: 12.5px; white-space: pre-wrap; line-height: 1.55; color: #3a3a3a;
+    }
+
+    .gestao { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .gestao-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .gestao .form-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .gestao .form-input, .gestao .form-select { padding: 10px 11px; font-size: 14px; }
+    .gestao-rodape { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .gestao-info { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .btn-salvar {
+      background: var(--dark); color: var(--gold-light); border: none; padding: 10px 22px; border-radius: 30px;
+      font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+    }
+    .btn-salvar:disabled { opacity: .5; cursor: default; }
+    .salvo-msg { font-size: 12px; font-weight: 700; }
+    .salvo-msg.ok { color: var(--success); }
+    .salvo-msg.err { color: var(--danger); }
+
+    .dp-vazio, .dp-carregando, .dp-erro { text-align: center; padding: 44px 20px; color: var(--muted); font-size: 14px; background: var(--white); border-radius: var(--radius); }
+    .dp-rodape { text-align: center; margin-top: 26px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+    @media (max-width: 520px) {
+      .gestao-grade { grid-template-columns: 1fr; }
+      .card { padding: 24px 18px; }
+      .pedido { padding: 16px 14px 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+
+<header class="dp-header">
+  <div class="dp-brand">Mistura Clássica<span>Painel do Distribuidor</span></div>
+  <div class="dp-sessao" id="dpSessao" style="display:none;">
+    <span id="dpQuem"></span>
+    <button type="button" onclick="dpSair()">Sair</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- ===== LOGIN: passo 1 — e-mail ===== -->
+  <div class="login-wrap" id="passoEmail">
+    <section class="card">
+      <h2 class="card-title">Entrar no painel</h2>
+      <p class="card-subtitle">Digite o e-mail cadastrado para a sua região. Vamos enviar um código de acesso para ele.</p>
+      <div class="form-group">
+        <label class="form-label" for="emailInput">E-mail</label>
+        <input type="email" class="form-input" id="emailInput" placeholder="seuemail@exemplo.com" autocomplete="email">
+      </div>
+      <div class="form-msg err" id="msgEmail" style="display:none;" aria-live="polite"></div>
+      <button type="button" class="btn-primary" id="btnEnviarCodigo" onclick="dpSolicitarCodigo()">Enviar código</button>
+    </section>
+  </div>
+
+  <!-- ===== LOGIN: passo 2 — código ===== -->
+  <div class="login-wrap" id="passoCodigo" style="display:none;">
+    <section class="card">
+      <h2 class="card-title">Confira seu e-mail</h2>
+      <p class="card-subtitle">Se este e-mail tiver acesso ao painel, enviamos um código de 6 dígitos para <strong id="codigoEmailRef"></strong>. Ele vale por 10 minutos.</p>
+      <div class="form-group">
+        <label class="form-label" for="codigoInput">Código de acesso</label>
+        <input type="text" class="form-input" id="codigoInput" inputmode="numeric" maxlength="6" placeholder="——————" autocomplete="one-time-code">
+      </div>
+      <div class="form-msg err" id="msgCodigo" style="display:none;" aria-live="polite"></div>
+      <button type="button" class="btn-primary" id="btnEntrar" onclick="dpValidarCodigo()">Entrar</button>
+      <div class="step-actions">
+        <button type="button" class="btn-link" onclick="dpVoltarParaEmail()">← Usar outro e-mail</button>
+        <button type="button" class="btn-link" id="btnReenviar" onclick="dpSolicitarCodigo(true)">Reenviar código</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===== PEDIDOS ===== -->
+  <section id="areaPedidos" style="display:none;">
+    <div class="dp-topo">
+      <div>
+        <h1 id="dpTitulo">Pedidos</h1>
+        <p id="dpSubtitulo">Pedidos feitos pelo site para a sua região.</p>
+      </div>
+      <button type="button" class="btn-atualizar" onclick="dpCarregarPedidos()">↻ Atualizar</button>
+    </div>
+
+    <div class="filtros">
+      <div class="chips" role="group" aria-label="Período">
+        <button type="button" class="chip" data-periodo="proximos">Próximos</button>
+        <button type="button" class="chip" data-periodo="hoje">Hoje</button>
+        <button type="button" class="chip" data-periodo="amanha">Amanhã</button>
+        <button type="button" class="chip" data-periodo="fds">Fim de semana</button>
+        <button type="button" class="chip" data-periodo="7d">Próximos 7 dias</button>
+        <button type="button" class="chip" data-periodo="mes">Este mês</button>
+        <button type="button" class="chip" data-periodo="passados">Passados</button>
+        <button type="button" class="chip" data-periodo="todos">Todos</button>
+        <button type="button" class="chip" data-periodo="periodo">Escolher datas</button>
+      </div>
+      <div class="periodo" id="periodoBox">
+        <div><label class="form-label" for="fDe">De</label><input type="date" class="form-input" id="fDe"></div>
+        <div><label class="form-label" for="fAte">Até</label><input type="date" class="form-input" id="fAte"></div>
+      </div>
+      <div class="filtros-linha">
+        <div>
+          <label class="form-label" for="fSituacao">Situação</label>
+          <select class="form-select" id="fSituacao"></select>
+        </div>
+        <div id="fDistBox" style="display:none;">
+          <label class="form-label" for="fDist">Distribuidor</label>
+          <select class="form-select" id="fDist"></select>
+        </div>
+        <div>
+          <label class="form-label" for="fBusca">Buscar</label>
+          <input type="search" class="form-input" id="fBusca" placeholder="Nome, telefone, nº, bairro…">
+        </div>
+      </div>
+    </div>
+
+    <div class="resumo" id="resumo"></div>
+    <div class="por-dist" id="porDist" style="display:none;"></div>
+    <div id="listaPedidos"></div>
+
+    <p class="dp-rodape">
+      Os dados dos clientes são para atender o pedido e para o relacionamento com quem você atendeu, conforme o contrato com a Beer Flow. Não repasse a terceiros.<br>
+      Comissão de <span id="dpComissaoPct">7%</span> sobre o valor final (ou, sem ele, sobre o total estimado). Pedidos cancelados não geram comissão.
+    </p>
+  </section>
+
+</main>
+
+<script>
+// ============================================================
+//  CONFIGURAÇÃO — precisa ser IGUAL ao index.html / painel.html
+// ============================================================
+var MC_TRACK_URL   = 'https://script.google.com/macros/s/AKfycbyScvkqB0NT6nzM9boOhPeER2KB17UU1x5esPvu2n6sT_hlmJ0dIclOf_RgU7lvLaYZ/exec';
+var MC_TRACK_CHAVE = 'mistura-2026';
+// ============================================================
+
+var DP_TOKEN_KEY = 'mc_dist_token';
+var DP_EMAIL_KEY = 'mc_dist_email';
+var DP_FILTRO_KEY = 'mc_dist_filtros';
+
+var dp = {
+  perfil: null,
+  pedidos: [],
+  situacoes: ['Novo', 'Em contato', 'Confirmado', 'Entregue', 'Concluído', 'Cancelado'],
+  comissao: 0.07,
+  distribuidores: [],
+  filtro: { periodo: 'proximos', situacao: 'abertos', dist: '', busca: '', de: '', ate: '' }
+};
+var dpReenviarTimer = null;
+
+var DP_CORES = {
+  'Novo':       { cor: '#8A3A12', fundo: '#FDE6D6', barra: '#E0702A' },
+  'Em contato': { cor: '#8A6A1E', fundo: '#FDF3DC', barra: '#C8922A' },
+  'Confirmado': { cor: '#1E4F8A', fundo: '#DFEBFA', barra: '#3B7DD8' },
+  'Entregue':   { cor: '#1E6B3C', fundo: '#E4F5EA', barra: '#27AE60' },
+  'Concluído':  { cor: '#5A5A5A', fundo: '#EFEFEF', barra: '#9A9A9A' },
+  'Cancelado':  { cor: '#8A1E1E', fundo: '#F7DADA', barra: '#C0392B' }
+};
+var DP_ABERTOS = ['Novo', 'Em contato', 'Confirmado'];
+
+// ================== COMUNICAÇÃO ==================
+function dpChamar(acao, dados) {
+  return fetch(MC_TRACK_URL, {
+    method: 'POST',
+    body: JSON.stringify({ chave: MC_TRACK_CHAVE, acao: acao, dados: dados || {} }),
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+  }).then(function (r) { return r.json(); });
+}
+
+function dpLs(chave, valor) {
+  try {
+    if (valor === undefined) return localStorage.getItem(chave);
+    if (valor === null) localStorage.removeItem(chave); else localStorage.setItem(chave, valor);
+  } catch (e) { return null; }
+}
+
+function dpMostrarPasso(id) {
+  ['passoEmail', 'passoCodigo', 'areaPedidos'].forEach(function (s) {
+    document.getElementById(s).style.display = (s === id) ? 'block' : 'none';
+  });
+  document.getElementById('dpSessao').style.display = (id === 'areaPedidos') ? 'flex' : 'none';
+}
+
+function dpMsg(id, texto, tipo) {
+  var el = document.getElementById(id);
+  el.textContent = texto || '';
+  el.className = 'form-msg ' + (tipo || 'err');
+  el.style.display = texto ? 'block' : 'none';
+}
+
+// ================== LOGIN ==================
+function dpSolicitarCodigo(reenvio) {
+  var email = document.getElementById('emailInput').value.trim().toLowerCase();
+  if (!reenvio) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { dpMsg('msgEmail', 'Digite um e-mail válido.', 'err'); return; }
+    dpMsg('msgEmail', '', 'err');
+  } else {
+    email = document.getElementById('codigoEmailRef').textContent;
+  }
+
+  var btn = document.getElementById(reenvio ? 'btnReenviar' : 'btnEnviarCodigo');
+  var textoOriginal = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+
+  dpChamar('dist_solicitar_codigo', { email: email })
+    .then(function (r) {
+      if (r && r.erro === 'email_invalido') { dpMsg('msgEmail', 'Digite um e-mail válido.', 'err'); dpMostrarPasso('passoEmail'); return; }
+      if (r && r.erro === 'muitas_solicitacoes') {
+        var msg = 'Você já pediu o código várias vezes. Aguarde 15 minutos e tente de novo.';
+        dpMsg(reenvio ? 'msgCodigo' : 'msgEmail', msg, 'err');
+        return;
+      }
+      document.getElementById('codigoEmailRef').textContent = email;
+      document.getElementById('codigoInput').value = '';
+      dpMsg('msgCodigo', reenvio ? 'Enviamos um novo código.' : '', 'ok');
+      dpMostrarPasso('passoCodigo');
+      document.getElementById('codigoInput').focus();
+      dpEsperaReenvio();
+    })
+    .catch(function () {
+      dpMsg(reenvio ? 'msgCodigo' : 'msgEmail', 'Não conseguimos falar com o servidor agora. Tente novamente.', 'err');
+    })
+    .finally(function () { btn.disabled = false; btn.textContent = textoOriginal; if (reenvio) dpEsperaReenvio(); });
+}
+
+function dpEsperaReenvio() {
+  var btn = document.getElementById('btnReenviar');
+  var restante = 30;
+  clearTimeout(dpReenviarTimer);
+  btn.disabled = true;
+  var tique = function () {
+    btn.textContent = restante > 0 ? ('Reenviar código (' + restante + 's)') : 'Reenviar código';
+    if (restante <= 0) { btn.disabled = false; return; }
+    restante--;
+    dpReenviarTimer = setTimeout(tique, 1000);
+  };
+  tique();
+}
+
+function dpVoltarParaEmail() {
+  clearTimeout(dpReenviarTimer);
+  dpMsg('msgCodigo', '', 'err');
+  dpMostrarPasso('passoEmail');
+  document.getElementById('emailInput').focus();
+}
+
+function dpValidarCodigo() {
+  var email = document.getElementById('codigoEmailRef').textContent;
+  var codigo = document.getElementById('codigoInput').value.replace(/\D/g, '');
+  if (codigo.length !== 6) { dpMsg('msgCodigo', 'Digite os 6 dígitos do código.', 'err'); return; }
+
+  var btn = document.getElementById('btnEntrar');
+  btn.disabled = true;
+  btn.textContent = 'Entrando…';
+
+  dpChamar('dist_validar_codigo', { email: email, codigo: codigo })
+    .then(function (r) {
+      if (!r.ok) {
+        if (r.erro === 'codigo_expirado') dpMsg('msgCodigo', 'Esse código expirou ou não vale mais. Peça um novo.', 'err');
+        else if (r.erro === 'sem_acesso') dpMsg('msgCodigo', 'Este e-mail não tem acesso ao painel. Fale com a Beer Flow.', 'err');
+        else if (typeof r.restantes === 'number') dpMsg('msgCodigo', 'Código incorreto. Você ainda tem ' + r.restantes + ' tentativa(s).', 'err');
+        else dpMsg('msgCodigo', 'Código incorreto.', 'err');
+        return;
+      }
+      dpLs(DP_TOKEN_KEY, r.token);
+      dpLs(DP_EMAIL_KEY, email);
+      clearTimeout(dpReenviarTimer);
+      dpCarregarPedidos();
+    })
+    .catch(function () { dpMsg('msgCodigo', 'Não conseguimos falar com o servidor agora. Tente novamente.', 'err'); })
+    .finally(function () { btn.disabled = false; btn.textContent = 'Entrar'; });
+}
+
+function dpSair() {
+  var token = dpLs(DP_TOKEN_KEY);
+  dpLs(DP_TOKEN_KEY, null);
+  if (token) dpChamar('dist_sair', { token: token }).catch(function () {});
+  dp.perfil = null;
+  dp.pedidos = [];
+  document.getElementById('emailInput').value = dpLs(DP_EMAIL_KEY) || '';
+  dpMostrarPasso('passoEmail');
+}
+
+function dpSessaoExpirou() {
+  dpLs(DP_TOKEN_KEY, null);
+  dpMsg('msgEmail', 'Sua sessão expirou. Peça um novo código para continuar.', 'err');
+  document.getElementById('emailInput').value = dpLs(DP_EMAIL_KEY) || '';
+  dpMostrarPasso('passoEmail');
+}
+
+// ================== PEDIDOS ==================
+function dpCarregarPedidos() {
+  var token = dpLs(DP_TOKEN_KEY);
+  if (!token) { dpMostrarPasso('passoEmail'); return; }
+
+  var lista = document.getElementById('listaPedidos');
+  lista.innerHTML = '<div class="dp-carregando">Carregando pedidos…</div>';
+  dpMostrarPasso('areaPedidos');
+
+  dpChamar('dist_listar_pedidos', { token: token })
+    .then(function (r) {
+      if (!r.ok) { dpSessaoExpirou(); return; }
+      dp.perfil = r.perfil || {};
+      dp.pedidos = r.pedidos || [];
+      if (r.situacoes && r.situacoes.length) dp.situacoes = r.situacoes;
+      if (typeof r.comissao === 'number') dp.comissao = r.comissao;
+      dp.distribuidores = r.distribuidores || [];
+      dpMontarCabecalho();
+      dpRenderizar();
+    })
+    .catch(function () {
+      lista.innerHTML = '<div class="dp-erro">Não conseguimos carregar os pedidos agora.<br>' +
+        '<button type="button" class="btn-sec" style="margin-top:12px;" onclick="dpCarregarPedidos()">Tentar de novo</button></div>';
+    });
+}
+
+function dpMontarCabecalho() {
+  var p = dp.perfil;
+  document.getElementById('dpQuem').innerHTML = '<strong>' + dpEsc(p.nome || '') + '</strong> · ' + dpEsc(p.email || '');
+  document.getElementById('dpTitulo').textContent = p.admin ? 'Pedidos dos distribuidores' : 'Pedidos — ' + (p.nome || '');
+  document.getElementById('dpSubtitulo').textContent = p.admin
+    ? 'Visão de administrador: todos os pedidos encaminhados aos distribuidores.'
+    : 'Pedidos feitos pelo site para a sua região. Chame o cliente no WhatsApp, combine o pagamento e atualize a situação aqui.';
+  document.getElementById('dpComissaoPct').textContent = dpPct(dp.comissao);
+
+  // Situação
+  var selS = document.getElementById('fSituacao');
+  var opcoes = [['abertos', 'Em aberto (Novo, Em contato, Confirmado)'], ['', 'Todas']]
+    .concat(dp.situacoes.map(function (s) { return [s, s]; }));
+  selS.innerHTML = opcoes.map(function (o) { return '<option value="' + dpEsc(o[0]) + '">' + dpEsc(o[1]) + '</option>'; }).join('');
+  selS.value = dp.filtro.situacao;
+  if (selS.value !== dp.filtro.situacao) { dp.filtro.situacao = 'abertos'; selS.value = 'abertos'; }
+
+  // Distribuidor (só admin)
+  var boxD = document.getElementById('fDistBox');
+  if (p.admin) {
+    var selD = document.getElementById('fDist');
+    var dists = dp.distribuidores.slice();
+    dp.pedidos.forEach(function (x) {
+      if (x.distribuidor && !dists.some(function (d) { return d.codigo === x.distribuidor; })) {
+        dists.push({ codigo: x.distribuidor, nome: x.nomeDistribuidor || x.distribuidor, ativo: false });
+      }
+    });
+    selD.innerHTML = '<option value="">Todos</option>' + dists.map(function (d) {
+      return '<option value="' + dpEsc(d.codigo) + '">' + dpEsc(d.nome || d.codigo) + (d.ativo ? '' : ' (inativo)') + '</option>';
+    }).join('');
+    selD.value = dp.filtro.dist;
+    if (selD.value !== dp.filtro.dist) { dp.filtro.dist = ''; selD.value = ''; }
+    boxD.style.display = 'block';
+  } else {
+    dp.filtro.dist = '';
+    boxD.style.display = 'none';
+  }
+}
+
+// ================== FILTROS ==================
+function dpHojeIso(desloc) {
+  var d = new Date();
+  d.setHours(12, 0, 0, 0);
+  if (desloc) d.setDate(d.getDate() + desloc);
+  return dpIso(d);
+}
+function dpIso(d) {
+  return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+}
+
+/** Intervalo [de, ate] (ISO, inclusivo) do período escolhido; null = sem limite. */
+function dpIntervalo(periodo) {
+  var hoje = dpHojeIso(0);
+  switch (periodo) {
+    case 'proximos': return { de: hoje, ate: null, semData: true };
+    case 'hoje':     return { de: hoje, ate: hoje };
+    case 'amanha':   var am = dpHojeIso(1); return { de: am, ate: am };
+    case '7d':       return { de: hoje, ate: dpHojeIso(6) };
+    case 'fds': {
+      // Sexta a domingo: o fim de semana corrente (se hoje é sex/sáb/dom) ou o próximo.
+      var dow = new Date().getDay(); // 0 dom … 6 sáb
+      var ateSexta = (dow === 0) ? -2 : (dow === 6 ? -1 : 5 - dow);
+      var de = dpHojeIso(ateSexta), ate = dpHojeIso(ateSexta + 2);
+      if (de < hoje) de = hoje;
+      return { de: de, ate: ate };
+    }
+    case 'mes': {
+      var d = new Date();
+      var ini = new Date(d.getFullYear(), d.getMonth(), 1, 12);
+      var fim = new Date(d.getFullYear(), d.getMonth() + 1, 0, 12);
+      return { de: dpIso(ini), ate: dpIso(fim) };
+    }
+    case 'passados': return { de: null, ate: dpHojeIso(-1), desc: true };
+    case 'periodo':  return { de: dp.filtro.de || null, ate: dp.filtro.ate || null };
+    default:         return { de: null, ate: null, semData: true };
+  }
+}
+
+function dpFiltrar() {
+  var f = dp.filtro;
+  var iv = dpIntervalo(f.periodo);
+  var busca = dpNorm(f.busca);
+  var buscaDig = f.busca.replace(/\D/g, '');
+
+  var out = dp.pedidos.filter(function (p) {
+    if (f.dist && p.distribuidor !== f.dist) return false;
+    if (f.situacao === 'abertos') { if (DP_ABERTOS.indexOf(p.situacao) === -1) return false; }
+    else if (f.situacao && p.situacao !== f.situacao) return false;
+
+    if (!p.dataEvento) { if (!iv.semData && (iv.de || iv.ate)) return false; }
+    else {
+      if (iv.de && p.dataEvento < iv.de) return false;
+      if (iv.ate && p.dataEvento > iv.ate) return false;
+    }
+
+    if (busca) {
+      var alvo = dpNorm([p.numero, p.nome, p.telefone, p.email, p.bairro, p.cidade, p.endereco, p.documento, p.nomeDistribuidor].join(' '));
+      var achou = alvo.indexOf(busca) !== -1;
+      if (!achou && buscaDig.length >= 4) achou = String(p.telefone || '').replace(/\D/g, '').indexOf(buscaDig) !== -1 ||
+                                               String(p.documento || '').replace(/\D/g, '').indexOf(buscaDig) !== -1;
+      if (!achou) return false;
+    }
+    return true;
+  });
+
+  out.sort(function (a, b) {
+    var x = (a.dataEvento || '9999') + ' ' + (a.horario || '');
+    var y = (b.dataEvento || '9999') + ' ' + (b.horario || '');
+    return iv.desc ? y.localeCompare(x) : x.localeCompare(y);
+  });
+  return out;
+}
+
+function dpSalvarFiltros() {
+  dpLs(DP_FILTRO_KEY, JSON.stringify({ periodo: dp.filtro.periodo, situacao: dp.filtro.situacao, dist: dp.filtro.dist }));
+}
+
+// ================== RENDERIZAÇÃO ==================
+function dpRenderizar() {
+  document.querySelectorAll('.chip[data-periodo]').forEach(function (b) {
+    b.setAttribute('aria-pressed', b.getAttribute('data-periodo') === dp.filtro.periodo ? 'true' : 'false');
+  });
+  document.getElementById('periodoBox').className = 'periodo' + (dp.filtro.periodo === 'periodo' ? ' on' : '');
+
+  var lista = dpFiltrar();
+  dpRenderizarResumo(lista);
+
+  var alvo = document.getElementById('listaPedidos');
+  if (!dp.pedidos.length) {
+    alvo.innerHTML = '<div class="dp-vazio">Ainda não há pedidos do site para ' +
+      (dp.perfil && dp.perfil.admin ? 'os distribuidores' : 'a sua região') + '.<br>Quando chegar um, você também recebe um e-mail.</div>';
+    return;
+  }
+  if (!lista.length) {
+    alvo.innerHTML = '<div class="dp-vazio">Nenhum pedido com esses filtros.<br>' +
+      '<button type="button" class="btn-sec" style="margin-top:12px;" onclick="dpLimparFiltros()">Mostrar todos os pedidos</button></div>';
+    return;
+  }
+
+  var html = '';
+  var grupoAtual = null;
+  lista.forEach(function (p) {
+    var g = p.dataEvento || '';
+    if (g !== grupoAtual) {
+      grupoAtual = g;
+      html += '<div class="grupo-data">' + dpEsc(g ? dpDataLonga(g) : 'Sem data de evento') + '</div>';
+    }
+    html += dpCardPedido(p);
+  });
+  alvo.innerHTML = html;
+}
+
+function dpRenderizarResumo(lista) {
+  var n = lista.length;
+  var novos = lista.filter(function (p) { return p.situacao === 'Novo'; }).length;
+  var validos = lista.filter(function (p) { return p.situacao !== 'Cancelado'; });
+  var soma = 0, com = 0;
+  validos.forEach(function (p) {
+    var base = (p.valorFinal != null) ? p.valorFinal : (p.total || 0);
+    soma += base;
+    com += (p.comissao != null) ? p.comissao : base * dp.comissao;
+  });
+
+  document.getElementById('resumo').innerHTML =
+    dpResumoItem('Pedidos', n) +
+    dpResumoItem('Novos (sem contato)', novos) +
+    dpResumoItem('Valor (sem cancelados)', dpBrl(soma)) +
+    dpResumoItem('Comissão ' + dpPct(dp.comissao), dpBrl(com));
+
+  var box = document.getElementById('porDist');
+  if (!(dp.perfil && dp.perfil.admin) || dp.filtro.dist) { box.style.display = 'none'; return; }
+
+  var porD = {};
+  lista.forEach(function (p) {
+    var k = p.distribuidor || '?';
+    if (!porD[k]) porD[k] = { nome: p.nomeDistribuidor || k, n: 0, abertos: 0, cancel: 0, valor: 0, com: 0 };
+    var o = porD[k];
+    o.n++;
+    if (DP_ABERTOS.indexOf(p.situacao) !== -1) o.abertos++;
+    if (p.situacao === 'Cancelado') { o.cancel++; return; }
+    var base = (p.valorFinal != null) ? p.valorFinal : (p.total || 0);
+    o.valor += base;
+    o.com += (p.comissao != null) ? p.comissao : base * dp.comissao;
+  });
+  var chaves = Object.keys(porD);
+  if (!chaves.length) { box.style.display = 'none'; return; }
+  chaves.sort(function (a, b) { return porD[b].valor - porD[a].valor; });
+
+  box.innerHTML = '<h2>Por distribuidor (filtro atual)</h2><table><thead><tr>' +
+    '<th>Distribuidor</th><th class="num">Pedidos</th><th class="num">Em aberto</th><th class="num">Cancelados</th>' +
+    '<th class="num">Valor</th><th class="num">Comissão</th></tr></thead><tbody>' +
+    chaves.map(function (k) {
+      var o = porD[k];
+      return '<tr><td>' + dpEsc(o.nome) + '</td><td class="num">' + o.n + '</td><td class="num">' + o.abertos +
+        '</td><td class="num">' + o.cancel + '</td><td class="num">' + dpBrl(o.valor) + '</td><td class="num">' + dpBrl(o.com) + '</td></tr>';
+    }).join('') + '</tbody></table>';
+  box.style.display = 'block';
+}
+
+function dpResumoItem(rotulo, valor) {
+  return '<div class="resumo-item"><small>' + dpEsc(rotulo) + '</small><strong>' + dpEsc(String(valor)) + '</strong></div>';
+}
+
+function dpCardPedido(p) {
+  var cor = DP_CORES[p.situacao] || DP_CORES['Novo'];
+  var id = dpIdSeguro(p.numero);
+  var tel = String(p.telefone || '').replace(/\D/g, '');
+  var telWa = tel ? (tel.length <= 11 ? '55' + tel : tel) : '';
+  var primeiroNome = String(p.nome || '').trim().split(/\s+/)[0] || '';
+  var msgWa = encodeURIComponent('Olá' + (primeiroNome ? ', ' + primeiroNome : '') + '! Recebemos o seu pedido ' +
+    p.numero + ' de chope Mistura Clássica pelo site. ');
+  var evento = p.dataEvento ? dpDataCurta(p.dataEvento) + (p.horario ? ' às ' + p.horario.replace(':', 'h') : '') : 'Data a combinar';
+  var endereco = [p.endereco, p.bairro, p.cidade].filter(Boolean).join(' — ');
+  var mapa = endereco ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([p.endereco, p.bairro, p.cidade, p.cep].filter(Boolean).join(', ')) : '';
+  var docRot = (String(p.tipoDoc || '').toLowerCase() === 'cnpj') ? 'CNPJ' : 'CPF';
+  var opcoes = dp.situacoes.map(function (s) {
+    return '<option value="' + dpEsc(s) + '"' + (s === p.situacao ? ' selected' : '') + '>' + dpEsc(s) + '</option>';
+  }).join('');
+  var valorFinalTxt = (p.valorFinal != null) ? dpNumBr(p.valorFinal) : '';
+  var info = [];
+  info.push('Comissão: <b>' + dpBrl(p.comissao != null ? p.comissao : 0) + '</b>');
+  if (p.atualizadoEm) info.push('Atualizado em ' + dpEsc(p.atualizadoEm) + (p.atualizadoPor ? ' por ' + dpEsc(p.atualizadoPor) : ''));
+  info.push('Recebido em ' + dpEsc(p.registradoEm || '—'));
+
+  return '' +
+  '<article class="pedido" id="ped-' + id + '" style="border-left-color:' + cor.barra + ';">' +
+    '<div class="pedido-topo">' +
+      '<div class="pedido-id">' +
+        '<div class="pedido-cliente">' + dpEsc(p.nome || 'Cliente sem nome') + '</div>' +
+        '<div class="pedido-meta"><b>' + dpEsc(evento) + '</b> · Pedido ' + dpEsc(p.numero) + '</div>' +
+        (dp.perfil && dp.perfil.admin ? '<span class="tag-dist">' + dpEsc(p.nomeDistribuidor || p.distribuidor) + '</span>' : '') +
+      '</div>' +
+      '<span class="pill" style="background:' + cor.fundo + ';color:' + cor.cor + ';">' + dpEsc(p.situacao) + '</span>' +
+    '</div>' +
+
+    '<div class="pedido-acoes-contato">' +
+      (telWa ? '<a class="btn-wa" href="https://wa.me/' + telWa + '?text=' + msgWa + '" target="_blank" rel="noopener">WhatsApp do cliente</a>' : '') +
+      (tel ? '<a class="btn-sec" href="tel:+' + telWa + '">Ligar</a>' : '') +
+      (mapa ? '<a class="btn-sec" href="' + mapa + '" target="_blank" rel="noopener">Ver no mapa</a>' : '') +
+    '</div>' +
+
+    '<div class="pedido-grade">' +
+      dpCampo('Telefone', p.telefone) +
+      dpCampo('E-mail', p.email) +
+      dpCampo(docRot, p.documento) +
+      dpCampo('Nascimento', p.nascimento ? dpDataBr(p.nascimento) : '') +
+      dpCampo('Endereço do evento', endereco + (p.cep ? ' · CEP ' + p.cep : '')) +
+      dpCampo('Serviço', p.servico) +
+      dpCampo('Itens', p.itens) +
+      dpCampo('Entrega', p.entrega) +
+      '<div class="campo"><small>Total estimado</small><div class="valor-grande">' + dpBrl(p.total) + '</div>' +
+        (p.frete != null ? '<div style="font-size:12px;color:var(--muted);">inclui frete de ' + dpBrl(p.frete) + '</div>' : '') + '</div>' +
+    '</div>' +
+
+    (p.resumo ? '<details class="resumo-pedido"><summary>Resumo completo do pedido</summary><pre>' + dpEsc(p.resumo) + '</pre></details>' : '') +
+
+    '<div class="gestao">' +
+      '<div class="gestao-grade">' +
+        '<div><label class="form-label" for="sit-' + id + '">Situação</label>' +
+          '<select class="form-select" id="sit-' + id + '">' + opcoes + '</select></div>' +
+        '<div><label class="form-label" for="vf-' + id + '">Valor final cobrado (R$)</label>' +
+          '<input class="form-input" id="vf-' + id + '" inputmode="decimal" placeholder="' + dpEsc(p.total != null ? dpNumBr(p.total) : '0,00') + '" value="' + dpEsc(valorFinalTxt) + '"></div>' +
+      '</div>' +
+      '<div style="margin-top:10px;"><label class="form-label" for="obs-' + id + '">Observação interna</label>' +
+        '<textarea class="form-textarea" id="obs-' + id + '" maxlength="500" placeholder="Ex.: pagou sinal no PIX, entrega às 10h…">' + dpEsc(p.obs || '') + '</textarea></div>' +
+      '<div class="gestao-rodape">' +
+        '<div class="gestao-info">' + info.join('<br>') + '</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<span class="salvo-msg" id="msg-' + id + '" aria-live="polite"></span>' +
+          '<button type="button" class="btn-salvar" id="btn-' + id + '" data-numero="' + dpEsc(p.numero) + '" onclick="dpSalvarPedido(this)">Salvar</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</article>';
+}
+
+function dpCampo(rotulo, valor) {
+  if (valor == null || String(valor).trim() === '') return '';
+  return '<div class="campo"><small>' + dpEsc(rotulo) + '</small><div>' + dpEsc(valor) + '</div></div>';
+}
+
+// ================== SALVAR ==================
+function dpSalvarPedido(btn) {
+  var numero = btn.getAttribute('data-numero');
+  var id = dpIdSeguro(numero);
+  var situacao = document.getElementById('sit-' + id).value;
+  var valorFinal = document.getElementById('vf-' + id).value.trim();
+  var obs = document.getElementById('obs-' + id).value;
+  var msg = document.getElementById('msg-' + id);
+
+  if (valorFinal && !/^[\d.,\s]+$/.test(valorFinal.replace(/^R\$\s*/i, ''))) {
+    msg.className = 'salvo-msg err';
+    msg.textContent = 'Valor final inválido.';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Salvando…';
+  msg.textContent = '';
+
+  dpChamar('dist_atualizar_pedido', {
+    token: dpLs(DP_TOKEN_KEY), numero: numero, situacao: situacao, valorFinal: valorFinal, obs: obs
+  })
+    .then(function (r) {
+      if (!r.ok) {
+        if (r.erro === 'sessao_invalida') { dpSessaoExpirou(); return; }
+        var erros = {
+          valor_invalido: 'Valor final inválido.',
+          situacao_invalida: 'Situação inválida.',
+          pedido_nao_encontrado: 'Pedido não encontrado.'
+        };
+        msg.className = 'salvo-msg err';
+        msg.textContent = erros[r.erro] || 'Não foi possível salvar.';
+        return;
+      }
+      for (var i = 0; i < dp.pedidos.length; i++) {
+        if (dp.pedidos[i].numero === numero) { dp.pedidos[i] = r.pedido; break; }
+      }
+      // Re-renderiza só este card (mantém a posição da tela); o resumo é recalculado.
+      var card = document.getElementById('ped-' + id);
+      if (card) {
+        var tmp = document.createElement('div');
+        tmp.innerHTML = dpCardPedido(r.pedido);
+        card.parentNode.replaceChild(tmp.firstChild, card);
+        var m2 = document.getElementById('msg-' + id);
+        if (m2) { m2.className = 'salvo-msg ok'; m2.textContent = 'Salvo ✓'; }
+      }
+      dpRenderizarResumo(dpFiltrar());
+    })
+    .catch(function () {
+      msg.className = 'salvo-msg err';
+      msg.textContent = 'Sem conexão. Tente de novo.';
+    })
+    .finally(function () {
+      var b = document.getElementById('btn-' + id);
+      if (b) { b.disabled = false; b.textContent = 'Salvar'; }
+    });
+}
+
+function dpLimparFiltros() {
+  dp.filtro.periodo = 'todos';
+  dp.filtro.situacao = '';
+  dp.filtro.dist = '';
+  dp.filtro.busca = '';
+  document.getElementById('fSituacao').value = '';
+  document.getElementById('fBusca').value = '';
+  var selD = document.getElementById('fDist');
+  if (selD) selD.value = '';
+  dpSalvarFiltros();
+  dpRenderizar();
+}
+
+// ================== AUXILIARES ==================
+var DP_MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+var DP_DIAS = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+
+function dpDataObj(iso) {
+  var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12) : null;
+}
+function dpDataLonga(iso) {
+  var d = dpDataObj(iso);
+  if (!d) return iso;
+  var rel = iso === dpHojeIso(0) ? 'Hoje — ' : (iso === dpHojeIso(1) ? 'Amanhã — ' : '');
+  return rel + DP_DIAS[d.getDay()] + ', ' + d.getDate() + ' de ' + DP_MESES[d.getMonth()] +
+    (d.getFullYear() !== new Date().getFullYear() ? ' de ' + d.getFullYear() : '');
+}
+function dpDataCurta(iso) {
+  var d = dpDataObj(iso);
+  if (!d) return iso;
+  return DP_DIAS[d.getDay()].slice(0, 3) + ', ' + ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2);
+}
+function dpDataBr(iso) {
+  var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? m[3] + '/' + m[2] + '/' + m[1] : String(iso || '');
+}
+function dpBrl(v) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  return 'R$ ' + dpNumBr(v);
+}
+function dpNumBr(v) {
+  return Number(v).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+function dpPct(v) {
+  return (Math.round(Number(v) * 1000) / 10).toString().replace('.', ',') + '%';
+}
+function dpNorm(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+function dpIdSeguro(s) {
+  return String(s || '').replace(/[^A-Za-z0-9_-]/g, '_');
+}
+function dpEsc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ================== INÍCIO ==================
+(function init() {
+  // Filtros lembrados neste aparelho (período, situação, distribuidor).
+  try {
+    var salvo = JSON.parse(dpLs(DP_FILTRO_KEY) || 'null');
+    if (salvo) {
+      if (salvo.periodo && salvo.periodo !== 'periodo') dp.filtro.periodo = salvo.periodo;
+      if (typeof salvo.situacao === 'string') dp.filtro.situacao = salvo.situacao;
+      if (typeof salvo.dist === 'string') dp.filtro.dist = salvo.dist;
+    }
+  } catch (e) { /* segue com o padrão */ }
+
+  document.querySelectorAll('.chip[data-periodo]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      dp.filtro.periodo = b.getAttribute('data-periodo');
+      if (dp.filtro.periodo === 'periodo' && !dp.filtro.de) {
+        dp.filtro.de = dpHojeIso(0);
+        document.getElementById('fDe').value = dp.filtro.de;
+      }
+      dpSalvarFiltros();
+      dpRenderizar();
+    });
+  });
+  document.getElementById('fDe').addEventListener('change', function (e) { dp.filtro.de = e.target.value; dpRenderizar(); });
+  document.getElementById('fAte').addEventListener('change', function (e) { dp.filtro.ate = e.target.value; dpRenderizar(); });
+  document.getElementById('fSituacao').addEventListener('change', function (e) { dp.filtro.situacao = e.target.value; dpSalvarFiltros(); dpRenderizar(); });
+  document.getElementById('fDist').addEventListener('change', function (e) { dp.filtro.dist = e.target.value; dpSalvarFiltros(); dpRenderizar(); });
+  var buscaTimer = null;
+  document.getElementById('fBusca').addEventListener('input', function (e) {
+    clearTimeout(buscaTimer);
+    buscaTimer = setTimeout(function () { dp.filtro.busca = e.target.value; dpRenderizar(); }, 200);
+  });
+  document.getElementById('emailInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') dpSolicitarCodigo(); });
+  document.getElementById('codigoInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') dpValidarCodigo(); });
+
+  // E-mail pré-preenchido pelo link (#email=...). O "#" não é enviado a servidor nenhum.
+  var emailUrl = '';
+  try {
+    var hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+    emailUrl = hash.get('email') || '';
+    if (location.hash || location.search) history.replaceState(null, '', location.pathname);
+  } catch (e) { /* navegadores antigos */ }
+
+  if (dpLs(DP_TOKEN_KEY)) { dpCarregarPedidos(); return; }
+
+  var pre = emailUrl || dpLs(DP_EMAIL_KEY) || '';
+  if (pre) document.getElementById('emailInput').value = pre;
+  dpMostrarPasso('passoEmail');
+})();
+</script>
+</body>
+</html>
