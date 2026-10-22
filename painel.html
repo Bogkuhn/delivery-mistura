@@ -113,8 +113,10 @@
     .pedido-topo-id { flex: 1 1 160px; min-width: 0; }
     .pedido-numero { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 17px; color: var(--gold); letter-spacing: .3px; white-space: nowrap; }
     .pedido-evento { font-size: 13px; color: var(--muted); margin-top: 3px; white-space: nowrap; }
+    .pedido-atendido { display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 600; color: #6b5418; background: #FFF4D6; padding: 4px 10px; border-radius: 20px; line-height: 1.4; }
+    .pedido-atendido strong { font-weight: 700; }
 
-    .pill { display: inline-block; flex: 0 0 auto; padding: 5px 12px; border-radius: 30px; font-size: 12px; font-weight: 700; line-height: 1.4; text-align: center; }
+    .pill { display: inline-block; flex: 0 1 auto; max-width: 100%; padding: 5px 12px; border-radius: 16px; font-size: 12px; font-weight: 700; line-height: 1.4; text-align: center; }
 
     .pedido-secao { margin-bottom: 12px; }
     .pedido-secao-titulo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 6px; }
@@ -204,7 +206,7 @@
 // ============================================================
 var MC_TRACK_URL   = 'https://script.google.com/macros/s/AKfycbyScvkqB0NT6nzM9boOhPeER2KB17UU1x5esPvu2n6sT_hlmJ0dIclOf_RgU7lvLaYZ/exec';
 var MC_TRACK_CHAVE = 'mistura-2026';
-var WHATSAPP_NUMBER = '5521973635340';
+var WHATSAPP_NUMBER = '5521973635340'; // pedidos de distribuidor usam o WhatsApp do distribuidor (vem do backend)
 // ============================================================
 
 var PNL_TOKEN_KEY = 'mc_painel_token';
@@ -404,6 +406,8 @@ function pnlCardPedido(p) {
   var itensHtml = (p.itens || []).map(function (i) { return '<li>' + pnlEsc(i) + '</li>'; }).join('');
   var pagamentoTexto = pnlTextoPagamento(p);
   var msgWa = encodeURIComponent('Olá! Estou entrando em contato sobre o meu pedido Nº ' + p.numero + '.');
+  // Pedido atendido por distribuidor parceiro: o WhatsApp é o do distribuidor da região.
+  var waNumero = String(p.whatsapp || '').replace(/\D/g, '') || WHATSAPP_NUMBER;
 
   return '' +
     '<article class="pedido" style="border-left-color:' + sit.barra + ';">' +
@@ -411,6 +415,7 @@ function pnlCardPedido(p) {
         '<div class="pedido-topo-id">' +
           '<div class="pedido-numero">' + pnlEsc(p.numero) + '</div>' +
           '<div class="pedido-evento">' + evento + '</div>' +
+          (p.atendidoPor ? '<div class="pedido-atendido">Atendido por <strong>' + pnlEsc(p.atendidoPor) + '</strong></div>' : '') +
         '</div>' +
         '<span class="pill" style="background:' + sit.fundo + ';color:' + sit.cor + ';">' + pnlEsc(p.situacao.rotulo) + '</span>' +
       '</div>' +
@@ -420,12 +425,13 @@ function pnlCardPedido(p) {
       '</div></div>' +
       '<div class="pedido-rodape">' +
         '<div class="pedido-total">' + pagamentoTexto + '<strong>' + pnlBrl(p.total) + '</strong></div>' +
-        '<a class="pedido-wa" href="https://wa.me/' + WHATSAPP_NUMBER + '?text=' + msgWa + '" target="_blank" rel="noopener">Falar no WhatsApp</a>' +
+        '<a class="pedido-wa" href="https://wa.me/' + waNumero + '?text=' + msgWa + '" target="_blank" rel="noopener">Falar no WhatsApp</a>' +
       '</div>' +
     '</article>';
 }
 
 function pnlTextoPagamento(p) {
+  if (p.atendidoPor) return 'Pagamento combinado pelo WhatsApp<br>Total estimado ';
   if (p.pagamento.status === 'pago' && p.pagamento.valorPago != null) {
     return 'Pago ' + (p.pagamento.parcela === 'sinal' ? '(sinal)' : '') + ' — ' + pnlBrl(p.pagamento.valorPago) + '<br>Total estimado ';
   }
