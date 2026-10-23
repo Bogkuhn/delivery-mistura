@@ -106,6 +106,17 @@
     .resumo-item small { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); }
     .resumo-item strong { display: block; font-size: 20px; margin-top: 3px; font-variant-numeric: tabular-nums; }
 
+    .transf-box { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); padding: 14px 16px; margin-bottom: 18px; }
+    .transf-box h2 { font-size: 15px; margin: 0 0 4px; }
+    .transf-box p { font-size: 12.5px; color: var(--muted); margin: 0 0 10px; line-height: 1.45; }
+    .transf-linha { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
+    .transf-linha .form-input, .transf-linha .form-select { padding: 10px 11px; font-size: 14px; }
+    .transf-card { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
+    .transf-card .transf-linha { grid-template-columns: 1fr auto; }
+    .transf-msg { font-size: 12.5px; margin-top: 8px; line-height: 1.45; }
+    .transf-msg.ok { color: var(--success); } .transf-msg.err { color: var(--danger); }
+    .historico { font-size: 12px; color: var(--muted); white-space: pre-wrap; margin: 10px 0 0; line-height: 1.5; }
+    @media (max-width: 560px) { .transf-linha { grid-template-columns: 1fr; } .transf-card .transf-linha { grid-template-columns: 1fr; } }
     .por-dist { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); padding: 14px 16px; margin-bottom: 18px; overflow-x: auto; }
     .por-dist h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 8px; }
     .por-dist table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -263,6 +274,17 @@
           <input type="search" class="form-input" id="fBusca" placeholder="Nome, telefone, nº, bairro…">
         </div>
       </div>
+    </div>
+
+    <div class="transf-box" id="transfBox" style="display:none;">
+      <h2>Transferir um pedido para um distribuidor</h2>
+      <p>Para um pedido seu (da Beer Flow) ou de qualquer distribuidor. O novo distribuidor recebe o e-mail de novo pedido e o cliente recebe a confirmação com o novo atendente.</p>
+      <div class="transf-linha">
+        <div><label class="form-label" for="tNumero">Nº do pedido</label><input class="form-input" id="tNumero" placeholder="MC-261023-…" autocomplete="off"></div>
+        <div><label class="form-label" for="tDestino">Para</label><select class="form-select" id="tDestino"></select></div>
+        <button type="button" class="btn-salvar" id="tBtn" onclick="dpTransferirDaCaixa()">Transferir</button>
+      </div>
+      <div class="transf-msg" id="tMsg" aria-live="polite"></div>
     </div>
 
     <div class="resumo" id="resumo"></div>
@@ -503,10 +525,22 @@ function dpMontarCabecalho() {
     selD.value = dp.filtro.dist;
     if (selD.value !== dp.filtro.dist) { dp.filtro.dist = ''; selD.value = ''; }
     boxD.style.display = 'block';
+    document.getElementById('tDestino').innerHTML = dpOpcoesDestino('');
+    document.getElementById('transfBox').style.display = 'block';
   } else {
     dp.filtro.dist = '';
     boxD.style.display = 'none';
+    document.getElementById('transfBox').style.display = 'none';
   }
+}
+
+// Distribuidores para onde o admin pode transferir (todos, menos o atual).
+function dpOpcoesDestino(atual) {
+  return '<option value="">Escolha…</option>' + dp.distribuidores.filter(function (d) {
+    return d.codigo !== atual;
+  }).map(function (d) {
+    return '<option value="' + dpEsc(d.codigo) + '">' + dpEsc(d.nome || d.codigo) + (d.ativo ? '' : ' (inativo no site)') + '</option>';
+  }).join('');
 }
 
 // ================== FILTROS ==================
@@ -740,6 +774,7 @@ function dpCardPedido(p) {
       '</div>' +
       '<div style="margin-top:10px;"><label class="form-label" for="obs-' + id + '">Observação interna</label>' +
         '<textarea class="form-textarea" id="obs-' + id + '" maxlength="500" placeholder="Ex.: pagou sinal no PIX, entrega às 10h…">' + dpEsc(p.obs || '') + '</textarea></div>' +
+      (p.historico ? '<div class="historico">' + dpEsc(p.historico) + '</div>' : '') +
       '<div class="gestao-rodape">' +
         '<div class="gestao-info">' + info.join('<br>') + '</div>' +
         '<div style="display:flex;align-items:center;gap:10px;">' +
@@ -747,6 +782,13 @@ function dpCardPedido(p) {
           '<button type="button" class="btn-salvar" id="btn-' + id + '" data-numero="' + dpEsc(p.numero) + '" onclick="dpSalvarPedido(this)">Salvar</button>' +
         '</div>' +
       '</div>' +
+      (dp.perfil && dp.perfil.admin
+        ? '<div class="transf-card"><div class="transf-linha">' +
+            '<div><label class="form-label" for="td-' + id + '">Transferir para outro distribuidor</label>' +
+            '<select class="form-select" id="td-' + id + '">' + dpOpcoesDestino(repassado ? '' : p.distribuidor) + '</select></div>' +
+            '<button type="button" class="btn-sec" data-numero="' + dpEsc(p.numero) + '" onclick="dpTransferirDoCard(this)">Transferir</button>' +
+          '</div><div class="transf-msg" id="tm-' + id + '" aria-live="polite"></div></div>'
+        : '') +
     '</div>' +
   '</article>';
 }
@@ -823,6 +865,65 @@ function dpSalvarPedido(btn) {
       var b = document.getElementById('btn-' + id);
       if (b) { b.disabled = false; b.textContent = 'Salvar'; }
     });
+}
+
+// ================== TRANSFERIR (admin) ==================
+var DP_ERROS_TRANSF = {
+  sem_permissao: 'Só o administrador pode transferir pedidos.',
+  pedido_nao_encontrado: 'Pedido não encontrado (procuro na aba dos distribuidores e nas abas Eventos deste mês e do anterior).',
+  destino_invalido: 'Escolha o distribuidor de destino.',
+  mesmo_distribuidor: 'O pedido já está com esse distribuidor.',
+  pago_beerflow: 'Este pedido já foi pago à Beer Flow pelo site. Resolva com o distribuidor fora do site.',
+  pedido_invalido: 'Informe o número do pedido.'
+};
+
+function dpTransferir(numero, destino, msgEl, btn, aoTerminar) {
+  if (!destino) { msgEl.className = 'transf-msg err'; msgEl.textContent = DP_ERROS_TRANSF.destino_invalido; return; }
+  var nomeDest = destino;
+  dp.distribuidores.forEach(function (d) { if (d.codigo === destino) nomeDest = d.nome || d.codigo; });
+  if (!window.confirm('Transferir o pedido ' + numero + ' para ' + nomeDest + '?\n\n' +
+      'Ele recebe o e-mail de novo pedido e o cliente recebe a confirmação com o novo atendente.')) return;
+  btn.disabled = true;
+  var txt = btn.textContent; btn.textContent = 'Transferindo…';
+  msgEl.className = 'transf-msg'; msgEl.textContent = '';
+  dpChamar('dist_transferir_pedido', { token: dpLs(DP_TOKEN_KEY), numero: numero, destino: destino })
+    .then(function (r) {
+      if (!r.ok) {
+        if (r.erro === 'sessao_invalida') { dpSessaoExpirou(); return; }
+        msgEl.className = 'transf-msg err';
+        msgEl.textContent = DP_ERROS_TRANSF[r.erro] || 'Não foi possível transferir.';
+        return;
+      }
+      var achou = false;
+      for (var i = 0; i < dp.pedidos.length; i++) {
+        if (dp.pedidos[i].numero === r.pedido.numero) { dp.pedidos[i] = r.pedido; achou = true; break; }
+      }
+      if (!achou) dp.pedidos.push(r.pedido);
+      if (aoTerminar) aoTerminar();
+      dpRenderizar();
+      var aviso = 'Pedido ' + r.pedido.numero + ' transferido para ' + (r.pedido.nomeDistribuidor || destino) + '.' +
+        ((r.avisos && r.avisos.length) ? ' Atenção: ' + r.avisos.join(' ') : '');
+      var cls = 'transf-msg ' + ((r.avisos && r.avisos.length) ? 'err' : 'ok');
+      [document.getElementById('tMsg'), document.getElementById('tm-' + dpIdSeguro(r.pedido.numero))].forEach(function (el) {
+        if (el) { el.className = cls; el.textContent = aviso; }
+      });
+    })
+    .catch(function () { msgEl.className = 'transf-msg err'; msgEl.textContent = 'Sem conexão. Tente de novo.'; })
+    .finally(function () { btn.disabled = false; btn.textContent = txt; });
+}
+
+function dpTransferirDaCaixa() {
+  var numero = document.getElementById('tNumero').value.trim().toUpperCase();
+  var msg = document.getElementById('tMsg');
+  if (!numero) { msg.className = 'transf-msg err'; msg.textContent = DP_ERROS_TRANSF.pedido_invalido; return; }
+  dpTransferir(numero, document.getElementById('tDestino').value, msg, document.getElementById('tBtn'),
+    function () { document.getElementById('tNumero').value = ''; });
+}
+
+function dpTransferirDoCard(btn) {
+  var numero = btn.getAttribute('data-numero');
+  var id = dpIdSeguro(numero);
+  dpTransferir(numero, document.getElementById('td-' + id).value, document.getElementById('tm-' + id), btn);
 }
 
 function dpLimparFiltros() {
