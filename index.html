@@ -2433,8 +2433,10 @@ function mcAcharEntrada(mapa, bairro, cidade) {
   if (!mapa || mapa === 'ERRO' || !bairro) return null;
   if (mapa.__porMunicipio && cidade) {
     var mun = mcNorm(mcLimparCidade(cidade));
+    // "(demais bairros)" vale para qualquer bairro do município que não está na lista.
     return mapa[mun + '|' + mcNorm(bairro)] ||
-           mapa[mun + '|' + mcNorm(String(bairro).replace(/\([^)]*\)/g, ' '))] || null;
+           mapa[mun + '|' + mcNorm(String(bairro).replace(/\([^)]*\)/g, ' '))] ||
+           mapa[mun + '|' + mcNorm('(demais bairros)')] || null;
   }
   var key   = String(bairro).toLowerCase().trim();
   var keySA = key.normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -2453,7 +2455,12 @@ function mcLimparCidade(s) {
 //   • Distribuidores: código, nome no site, razão social, documento,
 //     WhatsApp, sede, link da planilha de bairros, ATIVO NO SITE.
 //   • Territorios: município + bairro → código. '*' = município inteiro;
-//     a primeira linha de cada bairro vale; NENHUM = ninguém atende.
+//     NENHUM = ninguém atende. FILA (23/10/2026): o mesmo bairro pode ter
+//     vários distribuidores, na ordem da coluna PRIORIDADE (vazio = 1;
+//     empate = a linha de cima). Vale o 1º ATIVO; se ele não atende o
+//     bairro, bloqueou a data ou não tem o barril, o site tenta o próximo
+//     da fila e, por último, a reserva Beer Flow. BEERFLOW na fila encerra
+//     a fila ali.
 //   • Produtos: quais barris cada distribuidor tem (Sim/Não).
 //  A regra de "quem é o dono" é a MESMA do backend (dstRotaDoPedido_ no
 //  Distribuidores.gs): o que não for de distribuidor ATIVO fica com a Beer
@@ -2583,25 +2590,36 @@ function mcParseDistribuidores(table) {
   return out;
 }
 
-// { municipio: { todos: código, b: { bairro: código } } } — a 1ª linha vale.
+// { municipio: { todos: [códigos], b: { bairro: [códigos] } } } — fila por
+// bairro, ordenada pela coluna PRIORIDADE (vazio = 1; empate = linha de cima).
 function mcParseTerritorios(table) {
   var cab = mcCabecalhoGviz(table, 'municipio');
   if (!cab) throw new Error('Cabeçalho da aba Territorios não encontrado');
-  var col = mcColunas(cab.nomes, { municipio: 'municipio', bairro: 'bairro', dist: 'distribuidor' });
-  var out = {}, rows = table.rows || [];
+  var col = mcColunas(cab.nomes, { municipio: 'municipio', bairro: 'bairro', dist: 'distribuidor', prio: 'prioridade' });
+  var bruto = {}, rows = table.rows || [];
   for (var i = cab.inicio; i < rows.length; i++) {
     var c = rows[i].c || [];
     var mun  = mcNorm(mcLimparCidade(mcCelula(c, col.municipio)));
     var bai  = String(mcCelula(c, col.bairro)).trim();
     var dono = String(mcCelula(c, col.dist)).trim().toUpperCase();
     if (!mun || !bai || !dono) continue;
-    if (!out[mun]) out[mun] = { todos: '', b: {} };
-    if (bai === '*') { if (!out[mun].todos) out[mun].todos = dono; }
-    else {
-      var kb = mcNorm(bai);
-      if (!out[mun].b[kb]) out[mun].b[kb] = dono;
-    }
+    var prio = parseInt(String(mcCelula(c, col.prio)), 10);
+    if (!(prio >= 1)) prio = 1;
+    if (!bruto[mun]) bruto[mun] = { todos: [], b: {} };
+    var lista = (bai === '*') ? bruto[mun].todos : (bruto[mun].b[mcNorm(bai)] = bruto[mun].b[mcNorm(bai)] || []);
+    lista.push({ cod: dono, prio: prio, ordem: i });
   }
+  function ordenar(l) {
+    var vistos = {};
+    return l.sort(function(a, b) { return (a.prio - b.prio) || (a.ordem - b.ordem); })
+            .map(function(x) { return x.cod; })
+            .filter(function(cd) { if (vistos[cd]) return false; vistos[cd] = true; return true; });
+  }
+  var out = {};
+  Object.keys(bruto).forEach(function(m) {
+    out[m] = { todos: ordenar(bruto[m].todos), b: {} };
+    Object.keys(bruto[m].b).forEach(function(k) { out[m].b[k] = ordenar(bruto[m].b[k]); });
+  });
   return out;
 }
 
@@ -2628,20 +2646,32 @@ function mcParseProdutos(table) {
   return out;
 }
 
-// Dono do endereço — espelho do dstRotaDoPedido_ do backend.
+// Fila do endereço — espelho do dstRotaDoPedido_ do backend.
+// Devolve { codigo (1º ativo ou Beer Flow), dono (1º da fila), info,
+//           ativos: [códigos ativos da fila, na ordem], motivo }.
 function mcRotaSite(cidade, bairro) {
-  if (mcTerr.dist === 'ERRO' || mcTerr.terr === 'ERRO') return { codigo: MC_DIST_PADRAO, dono: '', motivo: 'erro_leitura' };
-  if (!mcTerr.dist || !mcTerr.terr) return { codigo: '', dono: '', motivo: 'carregando' };
+  if (mcTerr.dist === 'ERRO' || mcTerr.terr === 'ERRO') return { codigo: MC_DIST_PADRAO, dono: '', ativos: [], motivo: 'erro_leitura' };
+  if (!mcTerr.dist || !mcTerr.terr) return { codigo: '', dono: '', ativos: [], motivo: 'carregando' };
   var mun = mcTerr.terr[mcNorm(mcLimparCidade(cidade))];
-  var dono = '';
+  var fila = [];
   if (mun) {
-    dono = mun.b[mcNorm(bairro)] || mun.b[mcNorm(String(bairro || '').replace(/\([^)]*\)/g, ' '))] || mun.todos || '';
+    fila = mun.b[mcNorm(bairro)] || mun.b[mcNorm(String(bairro || '').replace(/\([^)]*\)/g, ' '))] || mun.todos || [];
   }
-  if (!dono || dono === 'NENHUM' || dono === MC_DIST_PADRAO) return { codigo: MC_DIST_PADRAO, dono: dono, motivo: dono ? 'dono' : 'sem_territorio' };
-  var info = mcTerr.dist[dono];
-  if (!info)       return { codigo: MC_DIST_PADRAO, dono: dono, motivo: 'codigo_desconhecido' };
-  if (!info.ativo) return { codigo: MC_DIST_PADRAO, dono: dono, motivo: 'inativo' };
-  return { codigo: dono, dono: dono, info: info, motivo: 'ativo' };
+  var dono = fila[0] || '';
+  var ativos = [];
+  for (var i = 0; i < fila.length; i++) {
+    var cd = fila[i];
+    if (cd === 'NENHUM' || cd === MC_DIST_PADRAO) break;
+    if (mcTerr.dist[cd] && mcTerr.dist[cd].ativo) ativos.push(cd);
+  }
+  if (!ativos.length) {
+    var motivo = !dono ? 'sem_territorio'
+               : (dono === 'NENHUM' || dono === MC_DIST_PADRAO) ? 'dono'
+               : mcTerr.dist[dono] ? 'inativo' : 'codigo_desconhecido';
+    return { codigo: MC_DIST_PADRAO, dono: dono, ativos: [], motivo: motivo };
+  }
+  return { codigo: ativos[0], dono: dono, info: mcTerr.dist[ativos[0]], ativos: ativos,
+           motivo: ativos[0] === dono ? 'ativo' : 'fila' };
 }
 
 // Planilha de bairros + calendário de um distribuidor (carrega na 1ª vez).
@@ -2706,30 +2736,49 @@ function mcAtendimento(bairro, isoDate) {
   if (rota.motivo === 'carregando') return { ok: false, frete: 0, aviso: 'carregando' };
 
   if (rota.codigo === MC_DIST_PADRAO) {
+    // A planilha da Beer Flow não tem coluna de município: fora do Rio e de
+    // Niterói, um bairro com o mesmo nome (ex.: "Centro" de Itaguaí,
+    // "Ribeira" de Angra) não pode cair na lista dela. Só vale para cidade
+    // conhecida da aba Territorios (texto digitado à mão segue como antes).
+    var munBF = mcNorm(mcLimparCidade(cidade));
+    if (munBF && mcTerr.terr && mcTerr.terr !== 'ERRO' && mcTerr.terr[munBF] && MC_MUNICIPIOS_BEERFLOW.indexOf(munBF) < 0) {
+      return { ok: false, frete: 0, aviso: 'nao_cadastrado', codigo: MC_DIST_PADRAO, dono: rota.dono || '' };
+    }
     var v = validarBairro(bairro, isoDate);
     v.codigo = MC_DIST_PADRAO;
     v.dono = rota.dono || '';
     return v;
   }
 
-  var cod = rota.codigo;
-  var vd = mcValidarNaFonte(mcFonte(cod), bairro, isoDate, cidade);
-  if (vd.aviso === 'carregando' || mcTerr.prod === null) return { ok: false, frete: 0, aviso: 'carregando' };
-  var faltando = mcItensFaltando(cod);
-  if (vd.ok && !faltando.length) {
-    return { ok: true, frete: vd.frete, aviso: vd.aviso, entry: vd.entry, codigo: cod, info: rota.info, dono: cod };
+  // Fila: o 1º ativo que atende o bairro, na data, com todos os barris.
+  var primeiro = null; // resultado do 1º da fila (para a mensagem, se ninguém atender)
+  for (var k = 0; k < rota.ativos.length; k++) {
+    var cod = rota.ativos[k];
+    var info = mcTerr.dist[cod];
+    var vd = mcValidarNaFonte(mcFonte(cod), bairro, isoDate, cidade);
+    if (vd.aviso === 'carregando' || mcTerr.prod === null) return { ok: false, frete: 0, aviso: 'carregando' };
+    var faltando = mcItensFaltando(cod);
+    if (vd.ok && !faltando.length) {
+      var r = { ok: true, frete: vd.frete, aviso: vd.aviso, entry: vd.entry, codigo: cod, info: info, dono: rota.ativos[0] };
+      if (k > 0) { r.reserva = primeiro.motivo; r.faltando = primeiro.faltando; }
+      return r;
+    }
+    if (!primeiro) {
+      primeiro = { cod: cod, info: info, vd: vd, faltando: faltando,
+                   motivo: !vd.ok ? (vd.aviso === 'bloqueado_data' ? 'data' : 'bairro') : 'produto' };
+    }
   }
 
-  // O distribuidor não consegue atender: tenta a Beer Flow antes de negar.
-  var motivo = !vd.ok ? (vd.aviso === 'bloqueado_data' ? 'data' : 'bairro') : 'produto';
+  // Ninguém da fila consegue atender: tenta a Beer Flow antes de negar.
+  var p1 = primeiro;
   var vb = mcReservaBeerFlow(cidade, bairro, isoDate);
   if (vb.aviso === 'carregando') return vb;
   if (vb.ok) {
-    return { ok: true, frete: vb.frete, aviso: null, entry: vb.entry, codigo: MC_DIST_PADRAO, dono: cod,
-             reserva: motivo, faltando: motivo === 'produto' ? faltando : [] };
+    return { ok: true, frete: vb.frete, aviso: null, entry: vb.entry, codigo: MC_DIST_PADRAO, dono: p1.cod,
+             reserva: p1.motivo, faltando: p1.motivo === 'produto' ? p1.faltando : [] };
   }
-  if (!vd.ok) return { ok: false, frete: 0, aviso: vd.aviso, codigo: cod, info: rota.info, dono: cod };
-  return { ok: false, frete: 0, aviso: 'produto_indisponivel', faltando: faltando, codigo: cod, info: rota.info, dono: cod };
+  if (!p1.vd.ok) return { ok: false, frete: 0, aviso: p1.vd.aviso, codigo: p1.cod, info: p1.info, dono: p1.cod };
+  return { ok: false, frete: 0, aviso: 'produto_indisponivel', faltando: p1.faltando, codigo: p1.cod, info: p1.info, dono: p1.cod };
 }
 
 // Guarda no pedido quem atende e ajusta WhatsApp e Termo.
