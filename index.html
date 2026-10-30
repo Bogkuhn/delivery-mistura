@@ -1001,6 +1001,7 @@
               </div>
             </div>
           </div>
+          <p id="tensao-nota" style="display:none;font-size:13px;color:var(--muted);margin:10px 0 0;line-height:1.5;"></p>
         </div>
       </div>
 
@@ -1655,25 +1656,9 @@
       <h2 class="card-title">Forma de Pagamento 💳</h2>
       <p class="card-subtitle">Como você prefere pagar pelo seu pedido?</p>
 
-      <div class="payment-card selected" id="pay-pix" onclick="selectPagamento('pix')">
-        <div class="payment-icon">💸</div>
-        <div>
-          <div class="payment-title">PIX</div>
-          <div class="payment-desc">Transferência instantânea. <strong>4% de desconto</strong> para pagamento integral no dia da reserva.</div>
-        </div>
-      </div>
-
-      <div class="payment-card" id="pay-cartao" onclick="selectPagamento('cartao')">
-        <div class="payment-icon">💳</div>
-        <div>
-          <div class="payment-title">Cartão de Crédito / Débito</div>
-          <div class="payment-desc"><strong>Parcelamento sem juros</strong> em até 3x (parcela mínima de R$ 200) para pagamento integral no ato da reserva. Link enviado via WhatsApp.</div>
-        </div>
-      </div>
-
-      <div class="info-box" style="margin-top:16px;">
-        💡 <strong>Prefere dividir?</strong> Você pode pagar <strong>50%</strong> para reservar os equipamentos e encomendar o chope, e os <strong>50% restantes</strong> na véspera do evento, em horário comercial — disponível tanto no PIX quanto no cartão.
-      </div>
+      <!-- Opções montadas por mcRenderPagamento() conforme o distribuidor (MC_PAGAMENTO_REGRAS) -->
+      <div id="pay-opcoes"></div>
+      <div class="info-box" id="pay-info" style="margin-top:16px;"></div>
 
       <div class="btn-row">
         <button class="btn-secondary" onclick="goToStep(5)">← Voltar</button>
@@ -2803,6 +2788,7 @@ function mcAplicarAtendimento(a, bairro) {
   if (order.distribuidor !== antes && order.termoAceito) mcInvalidarTermo();
   mcAtualizarWhatsApp();
   mcAtualizarLinkTermo();
+  mcAplicarRegrasChopeira();
 }
 
 // Link do rodapé para a página do Termo: em pedido de distribuidor leva ?d=CODIGO,
@@ -3839,8 +3825,9 @@ function selectChopeira(type) {
   document.getElementById('chop-' + type).classList.add('selected');
 
   const tensaoSection = document.getElementById('tensao-section');
-  tensaoSection.style.display = type === 'eletrica' ? 'flex' : 'none';
+  tensaoSection.style.display = type === 'eletrica' ? 'block' : 'none';
   if (type === 'gelo') order.tensao = null;
+  if (type === 'eletrica') mcAplicarRegrasChopeira();
   if (typeof updateBeerSubtotal === 'function') updateBeerSubtotal();
 }
 
@@ -3890,6 +3877,7 @@ function mcContinuarBarris() {
 // ============================================================
 function mcContinuarChopeira() {
   if (!order.chopeira) { alert('Por favor, selecione o tipo de chopeira.'); return; }
+  mcAplicarRegrasChopeira();
   if (order.chopeira === 'eletrica' && !order.tensao) { alert('Por favor, selecione a tensão da chopeira elétrica.'); return; }
   goToStep(5); // Chopeira → Seus Dados
 }
@@ -4445,6 +4433,7 @@ function goToStep6() {
   if (pagamentoOnlineDisponivel()) {
     goToResumo();
   } else {
+    mcRenderPagamento();
     goToStep(6);
   }
 }
@@ -4454,8 +4443,131 @@ function goToStep6() {
 // ============================================================
 function selectPagamento(tipo) {
   order.pagamento = tipo;
-  ['pay-pix','pay-cartao'].forEach(id => document.getElementById(id).classList.remove('selected'));
-  document.getElementById('pay-' + tipo).classList.add('selected');
+  document.querySelectorAll('#pay-opcoes .payment-card').forEach(function (el) {
+    el.classList.toggle('selected', el.id === 'pay-' + tipo);
+  });
+}
+
+// ============================================================
+//  REGRAS POR DISTRIBUIDOR (v1.5)
+//  Quem não aparece aqui segue o PADRAO (igual à Beer Flow).
+//  Para criar uma exceção nova: acrescente o código do distribuidor
+//  (o mesmo da planilha de territórios) em MC_PAGAMENTO_REGRAS e/ou
+//  em MC_SEM_TENSAO_220.
+// ============================================================
+var MC_DESCONTO_PIX_RESERVA = 3; // % no PIX integral no dia da reserva (padrão)
+
+// Distribuidores sem chopeira elétrica 220V.
+var MC_SEM_TENSAO_220 = ['CAMPOGRANDE'];
+
+var MC_PAGAMENTO_REGRAS = {
+  PADRAO: {
+    opcoes: [
+      { id: 'pix', icone: '💸', titulo: 'PIX',
+        desc: function () { return 'Transferência instantânea. <strong>' + MC_DESCONTO_PIX_RESERVA + '% de desconto</strong> para pagamento integral no dia da reserva.'; },
+        rotulo: '💸 PIX', texto: 'PIX' },
+      { id: 'cartao', icone: '💳', titulo: 'Cartão de Crédito / Débito',
+        desc: function () { return '<strong>Parcelamento sem juros</strong> em até 3x (parcela mínima de R$ 200) para pagamento integral no ato da reserva. Link enviado via WhatsApp.'; },
+        rotulo: '💳 Cartão de Crédito/Débito (link de pagamento)', texto: 'Cartão (link de pagamento)' }
+    ],
+    info: '💡 <strong>Prefere dividir?</strong> Você pode pagar <strong>50%</strong> para reservar os equipamentos e encomendar o chope, e os <strong>50% restantes</strong> na véspera do evento, em horário comercial — disponível tanto no PIX quanto no cartão.'
+  },
+
+  // Campo Grande: tudo integral na entrega, sem acréscimo nem desconto.
+  CAMPOGRANDE: {
+    opcoes: [
+      { id: 'pix', icone: '💸', titulo: 'PIX',
+        desc: function () { return 'Pagamento integral <strong>no ato da entrega</strong>.'; },
+        rotulo: '💸 PIX (integral na entrega)', texto: 'PIX (integral na entrega)' },
+      { id: 'dinheiro', icone: '💵', titulo: 'Dinheiro',
+        desc: function () { return 'Pagamento integral <strong>no ato da entrega</strong>.'; },
+        rotulo: '💵 Dinheiro (integral na entrega)', texto: 'Dinheiro (integral na entrega)' },
+      { id: 'cartao', icone: '💳', titulo: 'Cartão de Crédito / Débito',
+        desc: function () { return 'Pagamento integral <strong>no ato da entrega</strong>, na maquininha. Para <strong>parcelar no crédito</strong>, há a taxa da maquininha, informada pelo WhatsApp.'; },
+        rotulo: '💳 Cartão de Crédito/Débito (na entrega)', texto: 'Cartão na entrega (parcelado: taxa da maquininha, informada pelo WhatsApp)' }
+    ],
+    info: '💡 O pagamento é <strong>integral no ato da entrega</strong>, sem acréscimo nem desconto no PIX, no dinheiro ou no cartão à vista.'
+  },
+
+  // Zona Norte: PIX sem desconto; crédito com acréscimo de 6%, em até 3x.
+  ZONANORTE: {
+    opcoes: [
+      { id: 'pix', icone: '💸', titulo: 'PIX',
+        desc: function () { return 'Transferência instantânea.'; },
+        rotulo: '💸 PIX', texto: 'PIX' },
+      { id: 'cartao', icone: '💳', titulo: 'Cartão de Crédito / Débito',
+        desc: function (t) {
+          var c = mcArred2(t * 1.06);
+          return 'Débito sem acréscimo. <strong>Crédito com acréscimo de 6%</strong>, em até 3x' +
+            (t > 0 ? ' (' + fmt(c) + ', ou 3x de ' + fmt(mcArred2(c / 3)) + ')' : '') + '.';
+        },
+        rotulo: function (t) { return '💳 Cartão de Crédito/Débito — crédito com acréscimo de 6%: ' + fmt(mcArred2(t * 1.06)) + ' (até 3x)'; },
+        texto: function (t) { return 'Cartão (débito sem acréscimo; crédito com acréscimo de 6%: ' + fmt(mcArred2(t * 1.06)) + ', em até 3x)'; } }
+    ],
+    info: 'PADRAO'
+  }
+};
+
+function mcArred2(n) { return Math.round(n * 100) / 100; }
+
+function mcRegraPagamento() {
+  var cod = (typeof mcEhDistribuidor === 'function' && mcEhDistribuidor()) ? order.distribuidor : '';
+  var r = MC_PAGAMENTO_REGRAS[cod] || MC_PAGAMENTO_REGRAS.PADRAO;
+  var opcoes = r.opcoes.map(function (o) {
+    if (typeof o === 'string' && o.indexOf('PADRAO:') === 0) {
+      var id = o.slice(7);
+      return MC_PAGAMENTO_REGRAS.PADRAO.opcoes.filter(function (x) { return x.id === id; })[0];
+    }
+    return o;
+  });
+  var info = (r.info === 'PADRAO') ? MC_PAGAMENTO_REGRAS.PADRAO.info : (r.info || '');
+  return { opcoes: opcoes, info: info };
+}
+
+function mcValorRegra(v, t) { return (typeof v === 'function') ? v(t) : v; }
+
+function mcOpcaoPagamentoAtual() {
+  var r = mcRegraPagamento();
+  return r.opcoes.filter(function (o) { return o.id === order.pagamento; })[0] || r.opcoes[0];
+}
+
+/** Rótulo do resumo na tela e texto da linha PAGAMENTO do resumo completo. */
+function mcRotuloPagamento()  { return mcValorRegra(mcOpcaoPagamentoAtual().rotulo, calcTotal()); }
+function mcTextoPagamento()   { return mcValorRegra(mcOpcaoPagamentoAtual().texto, calcTotal()); }
+
+function mcRenderPagamento() {
+  var r = mcRegraPagamento();
+  var t = calcTotal();
+  if (!r.opcoes.some(function (o) { return o.id === order.pagamento; })) order.pagamento = r.opcoes[0].id;
+  document.getElementById('pay-opcoes').innerHTML = r.opcoes.map(function (o) {
+    return '<div class="payment-card' + (o.id === order.pagamento ? ' selected' : '') + '" id="pay-' + o.id + '" onclick="selectPagamento(\'' + o.id + '\')">' +
+      '<div class="payment-icon">' + o.icone + '</div>' +
+      '<div><div class="payment-title">' + o.titulo + '</div>' +
+      '<div class="payment-desc">' + mcValorRegra(o.desc, t) + '</div></div></div>';
+  }).join('');
+  var info = document.getElementById('pay-info');
+  info.innerHTML = r.info;
+  info.style.display = r.info ? '' : 'none';
+}
+
+/** Tensão: esconde 220V para quem não tem; se só sobra uma, já marca. */
+function mcAplicarRegrasChopeira() {
+  var sem220 = (typeof mcEhDistribuidor === 'function' && mcEhDistribuidor()) && MC_SEM_TENSAO_220.indexOf(order.distribuidor) !== -1;
+  var el220 = document.getElementById('tens-220');
+  var nota  = document.getElementById('tensao-nota');
+  if (el220) el220.style.display = sem220 ? 'none' : '';
+  if (sem220) {
+    if (order.tensao === '220v') {
+      // Tinha escolhido 220V e o endereço agora é deste distribuidor: o cliente escolhe de novo.
+      order.tensao = null; el220.classList.remove('selected');
+    } else if (order.chopeira === 'eletrica' && !order.tensao) {
+      selectTensao('110v'); // só sobrou 110V
+    }
+  }
+  if (nota) {
+    nota.textContent = sem220 ? 'Na sua região a chopeira elétrica é só 110V. Se a tomada do local for 220V, escolha a chopeira a gelo.' : '';
+    nota.style.display = sem220 ? 'block' : 'none';
+  }
 }
 
 // ============================================================
@@ -4580,7 +4692,7 @@ function buildResumo() {
   document.getElementById('resumo-dados').innerHTML = dadosHtml;
 
   // Pagamento
-  document.getElementById('resumo-pagamento').innerHTML = resumoItem('Forma de Pagamento', order.pagamento === 'pix' ? '💸 PIX' : '💳 Cartão de Crédito/Débito (link de pagamento)');
+  document.getElementById('resumo-pagamento').innerHTML = resumoItem('Forma de Pagamento', mcRotuloPagamento());
 
   // Total
   const total = calcTotal();
@@ -4820,7 +4932,7 @@ function montarResumoCompleto() {
   L.push('');
 
   if (order.freteExtra > 0) L.push('FRETE: ' + fmt(order.freteExtra) + ' (bairro: ' + order.bairro + ')');
-  L.push('PAGAMENTO: ' + (order.pagamento === 'pix' ? 'PIX' : 'Cartão (link de pagamento)'));
+  L.push('PAGAMENTO: ' + mcTextoPagamento());
   L.push('TOTAL ESTIMADO: ' + fmt(total));
 
   // Registro do aceite do Termo de Responsabilidade (prova do consentimento)
