@@ -1645,7 +1645,7 @@
 
       <div class="btn-row">
         <button class="btn-secondary" onclick="goToStep(order.service === 'barris' ? 2 : 1)">← Voltar</button>
-        <button class="btn-primary" onclick="goToStep6()">Continuar →</button>
+        <button class="btn-primary" id="btn-dados-continuar" onclick="goToStep6()">Continuar →</button>
       </div>
     </div>
   </div>
@@ -1719,6 +1719,11 @@
     <div class="summary-section" id="resumo-termo-section" style="display:none;">
       <div class="summary-section-title">Termo de Responsabilidade</div>
       <div id="resumo-termo"></div>
+    </div>
+
+    <div class="summary-section" id="resumo-cashback-section" style="display:none;">
+      <div class="summary-section-title" style="color:#1E6B3C;">💰 Cashback</div>
+      <div id="resumo-cashback"></div>
     </div>
 
     <div class="total-final">
@@ -3637,7 +3642,8 @@ function calcBeerTotal() {
   return calcBeerSubtotal() - calcKitDiscount() - calcDescontoGelo();
 }
 
-function calcTotal() {
+// Total SEM o cashback (base do cashback aplicado).
+function calcTotalBruto() {
   var total = 0;
   if (order.service === 'aluguel') total += 250;
   else total += calcBeerTotal();
@@ -3648,6 +3654,73 @@ function calcTotal() {
   total += (order.extraCups || 0) * 20;
   total += (order.freteExtra || 0);
   return total;
+}
+
+// ============================================================
+//  CASHBACK (09/11/2026) — 5% do último pedido pago, válido 13 meses.
+//  O saldo vem do Apps Script (ação 'cashback_consultar', Cashback.gs) ao
+//  sair da etapa de dados, e só se o e-mail OU o telefone bater com um
+//  pedido anterior do mesmo CPF/CNPJ. É aplicado INTEIRO neste pedido
+//  (até o valor do pedido). Pedidos de distribuidor: sem cashback.
+//  No resumo vai a linha "CASHBACK (pedido X): -R$ Y", que o BeerSales.gs
+//  lê como desconto; o valor usado vai em 'cashback_usado'.
+// ============================================================
+var MC_CASHBACK_TIMEOUT_MS = 6000;
+var mcCashbackConsultado = ''; // chave (doc|e-mail|telefone) já consultada
+
+function calcCashbackAplicado() {
+  if (!order.cashback || !(order.cashback.valor > 0) || mcEhDistribuidor()) return 0;
+  return Math.round(Math.min(order.cashback.valor, calcTotalBruto()) * 100) / 100;
+}
+
+function calcTotal() {
+  return Math.round((calcTotalBruto() - calcCashbackAplicado()) * 100) / 100;
+}
+
+function mcConsultarCashback(seguir) {
+  var doc = String(order.documento || '').replace(/\D/g, '');
+  var chave = doc + '|' + String(order.email || '').trim().toLowerCase() + '|' + String(order.telefone || '').replace(/\D/g, '');
+  if (mcEhDistribuidor() || !MC_TRACK_URL || MC_TRACK_URL.indexOf('COLE_AQUI') === 0) { seguir(); return; }
+  if (mcCashbackConsultado === chave) { seguir(); return; }
+
+  var btn = document.getElementById('btn-dados-continuar');
+  var textoBtn = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Verificando…'; }
+  var feito = false;
+  var fim = function (resp, guardar) {
+    if (feito) return;
+    feito = true;
+    if (btn) { btn.disabled = false; btn.textContent = textoBtn; }
+    if (resp && resp.ok && Number(resp.valor) > 0) {
+      order.cashback = { valor: Number(resp.valor), validade: resp.validade || '', origem: resp.origem || '' };
+    } else if (guardar) {
+      order.cashback = null;
+    }
+    if (guardar) mcCashbackConsultado = chave;
+    seguir();
+  };
+  setTimeout(function () { fim(null, false); }, MC_CASHBACK_TIMEOUT_MS);
+  fetch(MC_TRACK_URL, {
+    method: 'POST',
+    body: JSON.stringify({ chave: MC_TRACK_CHAVE, acao: 'cashback_consultar',
+      dados: { documento: doc, email: order.email || '', telefone: order.telefone || '' } }),
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (resp) { fim(resp, true); })
+    .catch(function () { fim(null, false); });
+}
+
+function mcRenderCashbackResumo() {
+  var sec = document.getElementById('resumo-cashback-section');
+  if (!sec) return;
+  var v = calcCashbackAplicado();
+  if (!(v > 0)) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  var cb = order.cashback;
+  document.getElementById('resumo-cashback').innerHTML =
+    resumoItem('Saldo do pedido ' + (cb.origem || 'anterior') + (cb.validade ? ' (válido até ' + cb.validade + ')' : ''), '\u2212' + fmt(v)) +
+    '<div style="font-size:12px;color:var(--muted);margin-top:6px;">Cashback de 5% do seu último pedido, aplicado automaticamente. Este pedido, quando pago, gera um novo cashback para a próxima vez.</div>';
 }
 
 function updateBeerSubtotal() {
@@ -4511,12 +4584,14 @@ function goToStep6() {
   // Liberado: pula a etapa antiga de "Pagamento" (escolha informativa) e vai
   // direto pro Resumo — a forma de pagamento real é escolhida DEPOIS, na
   // Etapa 8, só depois do aceite do Termo.
-  if (pagamentoOnlineDisponivel()) {
-    goToResumo();
-  } else {
-    mcRenderPagamento();
-    goToStep(6);
-  }
+  mcConsultarCashback(function () {
+    if (pagamentoOnlineDisponivel()) {
+      goToResumo();
+    } else {
+      mcRenderPagamento();
+      goToStep(6);
+    }
+  });
 }
 
 // ============================================================
@@ -4775,7 +4850,8 @@ function buildResumo() {
   // Pagamento
   document.getElementById('resumo-pagamento').innerHTML = resumoItem('Forma de Pagamento', mcRotuloPagamento());
 
-  // Total
+  // Cashback + Total
+  mcRenderCashbackResumo();
   const total = calcTotal();
   document.getElementById('resumo-total').textContent = fmt(total);
 }
@@ -5013,6 +5089,8 @@ function montarResumoCompleto() {
   L.push('');
 
   if (order.freteExtra > 0) L.push('FRETE: ' + fmt(order.freteExtra) + ' (bairro: ' + order.bairro + ')');
+  var cbUsado = calcCashbackAplicado();
+  if (cbUsado > 0) L.push('CASHBACK (pedido ' + (order.cashback.origem || 'anterior') + '): -' + fmt(cbUsado));
   L.push('PAGAMENTO: ' + mcTextoPagamento());
   L.push('TOTAL ESTIMADO: ' + fmt(total));
 
@@ -5124,7 +5202,9 @@ function registrarPedido(origem) {
         reserva_motivo: order.reserva || '',
         reserva_itens: order.reservaItens || '',
         // Cliente da casa (link ?c=): o backend confere o código na aba "Clientes Beer Flow"
-        cliente_casa: mcClienteCasa || ''
+        cliente_casa: mcClienteCasa || '',
+        // Cashback (Cashback.gs): quanto do saldo foi usado neste pedido
+        cashback_usado: calcCashbackAplicado()
       });
     } catch (e) { /* nunca interrompe a navegacao */ }
   }
