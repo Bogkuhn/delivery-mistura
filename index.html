@@ -2518,6 +2518,76 @@ function mcReavaliarEndereco() {
   if (el && el.value.trim()) mcAvaliarBairro(true);
 }
 
+// ============================================================
+//  CLIENTE DA CASA (09/11/2026) — link deliverymistura.com.br/?c=CODIGO
+//  Clientes antigos que continuam com a Beer Flow mesmo morando em
+//  território de distribuidor. O código vem no link, é conferido no Apps
+//  Script (ação 'cliente_casa', aba "Clientes Beer Flow") e fica guardado
+//  neste aparelho por 1 ano — o cliente pode voltar sem o link.
+//  Com código válido: se a planilha de bairros da Beer Flow atende o
+//  endereço na data, o pedido fica com a Beer Flow (mcAtendimento). Se ela
+//  diz "não atende" ou bloqueou a data, segue o caminho normal. O backend
+//  confere o código de novo antes de aceitar.
+// ============================================================
+var MC_CASA_LS       = 'mc_cliente_casa';
+var MC_CASA_VALIDADE = 365 * 24 * 3600 * 1000;
+var mcClienteCasa    = ''; // código em uso ('' = cliente comum)
+
+function mcNormCodigoCasa(s) {
+  s = String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return (s.length >= 4 && s.length <= 16) ? s : '';
+}
+
+function mcCasaGuardado() {
+  try {
+    var r = JSON.parse(localStorage.getItem(MC_CASA_LS) || 'null');
+    if (r && r.c && (Date.now() - Number(r.t || 0)) < MC_CASA_VALIDADE) return mcNormCodigoCasa(r.c);
+  } catch (e) {}
+  return '';
+}
+
+function mcCasaGuardar(cod) {
+  try {
+    if (cod) localStorage.setItem(MC_CASA_LS, JSON.stringify({ c: cod, t: Date.now() }));
+    else localStorage.removeItem(MC_CASA_LS);
+  } catch (e) {}
+}
+
+function mcCasaIniciar() {
+  var daUrl = '';
+  try {
+    var u = new URL(location.href);
+    daUrl = mcNormCodigoCasa(u.searchParams.get('c'));
+    if (u.searchParams.has('c')) {
+      // Tira o código da barra de endereço (não vai junto se o cliente compartilhar a página).
+      u.searchParams.delete('c');
+      history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash);
+    }
+  } catch (e) {}
+  var cod = daUrl || mcCasaGuardado();
+  if (!cod || !MC_TRACK_URL || MC_TRACK_URL.indexOf('COLE_AQUI') === 0) return;
+
+  fetch(MC_TRACK_URL, {
+    method: 'POST',
+    body: JSON.stringify({ chave: MC_TRACK_CHAVE, acao: 'cliente_casa', dados: { codigo: cod } }),
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+      if (!resp || !resp.ok) throw new Error('resposta inválida');
+      mcClienteCasa = resp.valido ? cod : '';
+      mcCasaGuardar(mcClienteCasa);
+      console.log(resp.valido ? '[Cliente da casa] atendimento Beer Flow.' : '[Cliente da casa] código não vale mais.');
+      mcReavaliarEndereco();
+    })
+    .catch(function() {
+      // Sem resposta do servidor: usa o código (o backend confere de novo no pedido).
+      mcClienteCasa = cod;
+      mcReavaliarEndereco();
+    });
+}
+mcCasaIniciar();
+
 // { papel: 'trecho do cabeçalho' } → { papel: índice da coluna }
 function mcColunas(nomes, papeis) {
   var col = {};
@@ -2733,6 +2803,17 @@ function mcAtendimento(bairro, isoDate) {
     v.codigo = MC_DIST_PADRAO;
     v.dono = rota.dono || '';
     return v;
+  }
+
+  // Cliente da casa (link ?c=): fica com a Beer Flow se a planilha dela
+  // atende o bairro na data. Se não atende, segue a fila normal abaixo.
+  if (mcClienteCasa) {
+    var vc = mcReservaBeerFlow(cidade, bairro, isoDate);
+    if (vc.aviso === 'carregando') return vc;
+    if (vc.ok) {
+      return { ok: true, frete: vc.frete, aviso: vc.aviso, entry: vc.entry, codigo: MC_DIST_PADRAO,
+               dono: rota.ativos[0] || rota.dono || '', casa: true };
+    }
   }
 
   // Fila: o 1º ativo que atende o bairro, na data, com todos os barris.
@@ -5041,7 +5122,9 @@ function registrarPedido(origem) {
         // aceita do site a escolha da Beer Flow como reserva)
         distribuidor: order.distribuidor || 'BEERFLOW',
         reserva_motivo: order.reserva || '',
-        reserva_itens: order.reservaItens || ''
+        reserva_itens: order.reservaItens || '',
+        // Cliente da casa (link ?c=): o backend confere o código na aba "Clientes Beer Flow"
+        cliente_casa: mcClienteCasa || ''
       });
     } catch (e) { /* nunca interrompe a navegacao */ }
   }
