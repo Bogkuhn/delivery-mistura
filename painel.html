@@ -143,6 +143,31 @@
     .pnl-voltar { display: block; text-align: center; margin-top: 24px; font-size: 13px; color: var(--muted); text-decoration: none; }
     .pnl-voltar:hover { color: var(--gold); }
 
+    /* ========== CASHBACK ========== */
+    .cashback {
+      background: #E8F4EA; border: 1px solid #BFE3C9; border-radius: var(--radius);
+      padding: 18px 20px; margin-bottom: 18px; color: #1E4D2B;
+    }
+    .cashback-titulo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: #2E7D46; }
+    .cashback-valor { font-family: 'Playfair Display', serif; font-weight: 900; font-size: 28px; color: #1E6B3C; margin: 4px 0 6px; }
+    .cashback-texto { font-size: 13px; line-height: 1.55; }
+    .cashback-texto + .cashback-texto { margin-top: 4px; }
+
+    /* ========== PAGAR PELO PAINEL ========== */
+    .pedido-pagar { margin-top: 14px; padding: 14px 16px; background: #FDF3DC; border-radius: 12px; font-size: 13px; line-height: 1.5; color: #6b5418; }
+    .pedido-pagar .btn-primary { margin-top: 10px; }
+    .pedido-pagar-opcoes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .pedido-pagar-opcoes .btn-primary { flex: 1 1 180px; width: auto; margin-top: 0; }
+    .pedido-pagar-msg { margin-top: 8px; color: var(--danger); font-weight: 600; }
+
+    .pag-fundo { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+    .pag-caixa { background: var(--white); border-radius: var(--radius); max-width: 400px; width: 100%; padding: 24px 22px; text-align: center; max-height: 92vh; overflow: auto; }
+    .pag-caixa h3 { font-family: 'Playfair Display', serif; font-size: 20px; margin-bottom: 4px; }
+    .pag-caixa .pag-valor { font-size: 22px; font-weight: 700; color: var(--gold); margin-bottom: 12px; }
+    .pag-caixa img { width: 220px; height: 220px; max-width: 100%; display: block; margin: 0 auto 12px; }
+    .pag-caixa textarea { width: 100%; height: 76px; font-size: 12px; font-family: monospace; border: 1px solid var(--border); border-radius: 8px; padding: 8px; resize: none; }
+    .pag-caixa p { font-size: 13px; color: var(--muted); line-height: 1.5; margin-top: 10px; }
+
     @media (prefers-reduced-motion: reduce) {
       * { transition: none !important; }
     }
@@ -194,8 +219,22 @@
       <h1>Seus pedidos</h1>
       <p>Aqui você acompanha a situação de cada pedido feito com esse e-mail.</p>
     </div>
+    <div id="areaCashback"></div>
     <div id="listaPedidos"></div>
   </section>
+
+  <!-- ===== PAGAMENTO PELO PAINEL (PIX) ===== -->
+  <div class="pag-fundo" id="pagFundo" role="dialog" aria-modal="true" aria-labelledby="pagTitulo">
+    <div class="pag-caixa">
+      <h3 id="pagTitulo">Pague com PIX</h3>
+      <div class="pag-valor" id="pagValor"></div>
+      <img id="pagQr" alt="QR Code do PIX">
+      <textarea id="pagCopia" readonly aria-label="PIX copia e cola"></textarea>
+      <button type="button" class="btn-primary" style="margin-top:10px;" onclick="pnlCopiarPix()" id="pagBtnCopiar">Copiar código PIX</button>
+      <p>Assim que o pagamento cair, o pedido muda para <strong>Pagamento confirmado</strong> aqui no painel (pode levar alguns minutos) e você recebe um e-mail.</p>
+      <button type="button" class="btn-link" style="margin-top:8px;" onclick="pnlFecharPagamento()">Fechar</button>
+    </div>
+  </div>
 
   <a href="/" class="pnl-voltar">← Voltar para o site</a>
 </main>
@@ -374,6 +413,7 @@ function pnlCarregarPedidos() {
         return;
       }
       document.getElementById('pnlEmailLogado').textContent = r.email;
+      pnlRenderizarCashback(r.cashback || []);
       pnlRenderizarPedidos(r.pedidos || []);
     })
     .catch(function () {
@@ -427,7 +467,115 @@ function pnlCardPedido(p) {
         '<div class="pedido-total">' + pagamentoTexto + '<strong>' + pnlBrl(p.total) + '</strong></div>' +
         '<a class="pedido-wa" href="https://wa.me/' + waNumero + '?text=' + msgWa + '" target="_blank" rel="noopener">Falar no WhatsApp</a>' +
       '</div>' +
+      pnlBlocoPagar(p) +
     '</article>';
+}
+
+// ================== CASHBACK ==================
+function pnlRenderizarCashback(lista) {
+  var area = document.getElementById('areaCashback');
+  if (!lista.length) { area.innerHTML = ''; return; }
+  var varios = lista.length > 1;
+  area.innerHTML = lista.map(function (c) {
+    return '<section class="cashback" aria-label="Cashback">' +
+      '<div class="cashback-titulo">💰 Seu cashback' + (varios ? ' — documento ' + pnlEsc(c.doc) : '') + '</div>' +
+      '<div class="cashback-valor">' + pnlBrl(c.valor) + '</div>' +
+      '<div class="cashback-texto">Desconto aplicado automaticamente no seu próximo pedido pelo site (5% do pedido ' + pnlEsc(c.origem) + ').</div>' +
+      '<div class="cashback-texto">Válido até <strong>' + pnlEsc(pnlDataBr(c.validade)) + '</strong>. Use o mesmo CPF/CNPJ e o mesmo e-mail ou telefone.</div>' +
+    '</section>';
+  }).join('');
+}
+
+function pnlDataBr(iso) {
+  var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? m[3] + '/' + m[2] + '/' + m[1] : String(iso || '');
+}
+
+// ================== PAGAR PELO PAINEL ==================
+function pnlBlocoPagar(p) {
+  var g = p.pagar;
+  if (!g) return '';
+  var id = 'pagar-' + String(p.numero).replace(/[^A-Za-z0-9]/g, '');
+  if (!g.disponivel) {
+    return '<div class="pedido-pagar">O pagamento deste pedido ainda está pendente. Como o evento é hoje ou amanhã, ' +
+      'o pagamento é feito com a nossa equipe — é só chamar no WhatsApp.</div>';
+  }
+  var num = pnlEsc(p.numero).replace(/'/g, '');
+  var html = '<div class="pedido-pagar" id="' + id + '">O pagamento deste pedido está pendente.';
+  if (g.escolher) {
+    html += ' Escolha como pagar:' +
+      '<div class="pedido-pagar-opcoes">' +
+        '<button type="button" class="btn-primary" onclick="pnlPagar(\'' + num + '\', \'pix\', this)">PIX — ' + pnlBrl(g.valorPix) + '</button>' +
+        '<button type="button" class="btn-primary" onclick="pnlPagar(\'' + num + '\', \'cartao\', this)">Cartão — ' + pnlBrl(g.valorCartao) + '</button>' +
+      '</div>' +
+      '<div style="margin-top:8px;">No PIX, 3% de desconto. No cartão, até 3x sem juros (parcela mínima de R$ 200).</div>';
+  } else {
+    var oque = (g.parcela === 'sinal' ? 'Sinal (50%)' : 'Pagamento integral') + ' no ' + (g.forma === 'cartao' ? 'cartão' : 'PIX');
+    html += ' ' + oque + ', como você escolheu no pedido:' +
+      '<button type="button" class="btn-primary" onclick="pnlPagar(\'' + num + '\', \'' + g.forma + '\', this)">Pagar ' + pnlBrl(g.valor) + '</button>';
+  }
+  return html + '<div class="pedido-pagar-msg" style="display:none;"></div></div>';
+}
+
+var PNL_ERROS_PAGAR = {
+  ja_pago: 'Este pedido já consta como pago. Atualize a página em alguns minutos.',
+  evento_proximo: 'Para eventos hoje ou amanhã, o pagamento é feito pelo WhatsApp.',
+  nao_disponivel: 'Este pedido não pode ser pago pelo painel. Fale com a gente no WhatsApp.',
+  pedido_nao_encontrado: 'Não encontramos este pedido. Atualize a página.',
+  sessao_invalida: 'Sua sessão expirou. Entre de novo para pagar.'
+};
+
+function pnlPagar(numero, forma, btn) {
+  var token = localStorage.getItem(PNL_TOKEN_KEY);
+  if (!token) { pnlMostrarPasso('passoEmail'); return; }
+  var bloco = btn.closest('.pedido-pagar');
+  var msg = bloco.querySelector('.pedido-pagar-msg');
+  var botoes = bloco.querySelectorAll('button');
+  var textoBtn = btn.textContent;
+  botoes.forEach(function (b) { b.disabled = true; });
+  btn.textContent = 'Gerando pagamento…';
+  msg.style.display = 'none';
+
+  pnlChamar('painel_pagar', { token: token, numero: numero, forma: forma })
+    .then(function (r) {
+      if (!r || !r.ok) {
+        msg.textContent = PNL_ERROS_PAGAR[r && r.erro] || 'Não conseguimos gerar o pagamento agora. Tente de novo ou fale com a gente no WhatsApp.';
+        msg.style.display = 'block';
+        return;
+      }
+      if (r.tipo === 'cartao' && r.invoiceUrl) {
+        window.location.href = r.invoiceUrl;
+        return;
+      }
+      if (r.tipo === 'pix') {
+        document.getElementById('pagValor').textContent = pnlBrl(r.valor);
+        document.getElementById('pagQr').src = 'data:image/png;base64,' + r.qrCodeBase64;
+        document.getElementById('pagCopia').value = r.copiaECola || '';
+        document.getElementById('pagBtnCopiar').textContent = 'Copiar código PIX';
+        document.getElementById('pagFundo').style.display = 'flex';
+      }
+    })
+    .catch(function () {
+      msg.textContent = 'Não conseguimos falar com o servidor agora. Tente novamente.';
+      msg.style.display = 'block';
+    })
+    .finally(function () {
+      botoes.forEach(function (b) { b.disabled = false; });
+      btn.textContent = textoBtn;
+    });
+}
+
+function pnlCopiarPix() {
+  var ta = document.getElementById('pagCopia');
+  var ok = function () { document.getElementById('pagBtnCopiar').textContent = 'Código copiado!'; };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(ok).catch(function () { ta.select(); document.execCommand('copy'); ok(); });
+  } else { ta.select(); document.execCommand('copy'); ok(); }
+}
+
+function pnlFecharPagamento() {
+  document.getElementById('pagFundo').style.display = 'none';
+  pnlCarregarPedidos();
 }
 
 function pnlTextoPagamento(p) {
