@@ -3665,8 +3665,12 @@ function calcTotalBruto() {
 //  No resumo vai a linha "CASHBACK (pedido X): -R$ Y", que o BeerSales.gs
 //  lê como desconto; o valor usado vai em 'cashback_usado'.
 // ============================================================
-var MC_CASHBACK_TIMEOUT_MS = 6000;
-var mcCashbackConsultado = ''; // chave (doc|e-mail|telefone) já consultada
+// v1.1 (10/11/2026): a consulta começa SOZINHA assim que CPF/CNPJ e e-mail
+// (ou telefone) estão preenchidos — o servidor leva alguns segundos. No
+// "Continuar", o site espera a resposta (até 20 s). Na v1.0 a consulta só
+// começava no clique e desistia em 6 s, sem aviso.
+var MC_CASHBACK_TIMEOUT_MS = 20000;
+var mcCb = { chave: '', estado: '', resp: null, esperando: [] }; // estado: pendente | ok | erro
 
 function calcCashbackAplicado() {
   if (!order.cashback || !(order.cashback.valor > 0) || mcEhDistribuidor()) return 0;
@@ -3677,38 +3681,96 @@ function calcTotal() {
   return Math.round((calcTotalBruto() - calcCashbackAplicado()) * 100) / 100;
 }
 
-function mcConsultarCashback(seguir) {
-  var doc = String(order.documento || '').replace(/\D/g, '');
-  var chave = doc + '|' + String(order.email || '').trim().toLowerCase() + '|' + String(order.telefone || '').replace(/\D/g, '');
-  if (mcEhDistribuidor() || !MC_TRACK_URL || MC_TRACK_URL.indexOf('COLE_AQUI') === 0) { seguir(); return; }
-  if (mcCashbackConsultado === chave) { seguir(); return; }
+function mcCbDados(doc, email, tel) {
+  doc = String(doc || '').replace(/\D/g, '');
+  email = String(email || '').trim().toLowerCase();
+  tel = String(tel || '').replace(/\D/g, '');
+  var docOk = doc.length === 11 || doc.length === 14;
+  var contatoOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || tel.length >= 10;
+  return { ok: docOk && contatoOk, chave: doc + '|' + email + '|' + tel, doc: doc, email: email, tel: tel };
+}
 
-  var btn = document.getElementById('btn-dados-continuar');
-  var textoBtn = btn ? btn.textContent : '';
-  if (btn) { btn.disabled = true; btn.textContent = 'Verificando…'; }
-  var feito = false;
-  var fim = function (resp, guardar) {
-    if (feito) return;
-    feito = true;
-    if (btn) { btn.disabled = false; btn.textContent = textoBtn; }
-    if (resp && resp.ok && Number(resp.valor) > 0) {
-      order.cashback = { valor: Number(resp.valor), validade: resp.validade || '', origem: resp.origem || '' };
-    } else if (guardar) {
-      order.cashback = null;
-    }
-    if (guardar) mcCashbackConsultado = chave;
-    seguir();
+function mcCbAtivo() {
+  return !mcEhDistribuidor() && !!MC_TRACK_URL && MC_TRACK_URL.indexOf('COLE_AQUI') !== 0;
+}
+
+function mcCbDisparar(dados) {
+  var chave = dados.chave;
+  mcCb = { chave: chave, estado: 'pendente', resp: null, esperando: [] };
+  var terminar = function (estado, resp) {
+    if (mcCb.chave !== chave) return; // dados mudaram no meio do caminho
+    mcCb.estado = estado;
+    mcCb.resp = resp;
+    var lista = mcCb.esperando;
+    mcCb.esperando = [];
+    lista.forEach(function (f) { f(); });
   };
-  setTimeout(function () { fim(null, false); }, MC_CASHBACK_TIMEOUT_MS);
   fetch(MC_TRACK_URL, {
     method: 'POST',
     body: JSON.stringify({ chave: MC_TRACK_CHAVE, acao: 'cashback_consultar',
-      dados: { documento: doc, email: order.email || '', telefone: order.telefone || '' } }),
+      dados: { documento: dados.doc, email: dados.email, telefone: dados.tel } }),
     headers: { 'Content-Type': 'text/plain;charset=utf-8' }
   })
     .then(function (r) { return r.json(); })
-    .then(function (resp) { fim(resp, true); })
-    .catch(function () { fim(null, false); });
+    .then(function (resp) { terminar(resp && resp.ok ? 'ok' : 'erro', resp); })
+    .catch(function () { terminar('erro', null); });
+}
+
+/** Chamada enquanto o cliente digita (etapa de dados): adianta a consulta. */
+function mcPreConsultarCashback() {
+  if (!mcCbAtivo()) return;
+  var v = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
+  var dados = mcCbDados(v('documento'), v('email'), v('telefone'));
+  if (!dados.ok) return;
+  if (mcCb.chave === dados.chave && mcCb.estado !== 'erro') return;
+  mcCbDisparar(dados);
+}
+
+(function () {
+  var timer = null;
+  var agendar = function () { clearTimeout(timer); timer = setTimeout(mcPreConsultarCashback, 900); };
+  var ligar = function () {
+    ['documento', 'email', 'telefone'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) { el.addEventListener('input', agendar); el.addEventListener('change', agendar); }
+    });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ligar); else ligar();
+})();
+
+/** No "Continuar" da etapa de dados: aplica o saldo (esperando a consulta, se preciso). */
+function mcConsultarCashback(seguir) {
+  if (!mcCbAtivo()) { seguir(); return; }
+  var dados = mcCbDados(order.documento, order.email, order.telefone);
+  if (!dados.ok) { order.cashback = null; seguir(); return; }
+
+  var aplicar = function () {
+    if (mcCb.chave !== dados.chave) return;
+    if (mcCb.estado === 'ok') {
+      var r = mcCb.resp || {};
+      order.cashback = Number(r.valor) > 0
+        ? { valor: Number(r.valor), validade: r.validade || '', origem: r.origem || '' }
+        : null;
+    }
+    // 'erro' ou demorou demais: segue sem cashback (o pedido não trava).
+  };
+
+  if (mcCb.chave !== dados.chave || mcCb.estado === 'erro') { order.cashback = null; mcCbDisparar(dados); }
+  if (mcCb.estado === 'ok') { aplicar(); seguir(); return; }
+
+  var btn = document.getElementById('btn-dados-continuar');
+  var textoBtn = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Verificando seu cashback…'; }
+  var feito = false;
+  var fim = function () {
+    if (feito) return;
+    feito = true;
+    if (btn) { btn.disabled = false; btn.textContent = textoBtn; }
+    aplicar();
+    seguir();
+  };
+  mcCb.esperando.push(fim);
+  setTimeout(fim, MC_CASHBACK_TIMEOUT_MS);
 }
 
 function mcRenderCashbackResumo() {
