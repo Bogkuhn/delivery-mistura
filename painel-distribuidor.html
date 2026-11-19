@@ -198,6 +198,68 @@
       .card { padding: 24px 18px; }
       .pedido { padding: 16px 14px 14px; }
     }
+    /* ========== MODO DE EXIBIÇÃO (v1.5) ========== */
+    .dp-acoes-topo { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .modo { display: inline-flex; background: var(--white); border: 1.5px solid var(--border); border-radius: 30px; padding: 3px; }
+    .modo button { background: none; border: none; padding: 6px 14px; border-radius: 30px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; color: var(--muted); }
+    .modo button[aria-pressed="true"] { background: var(--dark); color: var(--gold-light); }
+
+    /* ========== MODO LISTA (v1.5) ========== */
+    .lista { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .lista-cab, .lin {
+      display: grid; grid-template-columns: 168px minmax(0, 1.4fr) minmax(0, 1fr) 104px 108px 124px;
+      gap: 10px; align-items: center; padding: 0 14px; border-left: 4px solid transparent;
+    }
+    .lista-cab { background: var(--cream); border-bottom: 1px solid var(--border); }
+    .lista-cab-rot { display: none; }
+    .ord {
+      background: none; border: none; font-family: inherit; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px;
+      color: var(--muted); padding: 12px 0; cursor: pointer; text-align: left; display: inline-flex; gap: 4px; align-items: center; justify-self: start;
+    }
+    .ord.num { justify-self: end; }
+    .ord:hover, .ord.ativa { color: var(--text); }
+    .ord .seta { color: var(--gold); font-size: 10px; }
+    .lin {
+      width: 100%; background: var(--white); border-top: none; border-right: none; border-bottom: 1px solid var(--border);
+      text-align: left; font-family: inherit; font-size: 14px; color: var(--text); cursor: pointer; padding-top: 11px; padding-bottom: 11px;
+    }
+    .lin:last-child { border-bottom: none; }
+    .lin:hover { background: #FFFBF2; }
+    .lin > span { min-width: 0; }
+    .c-numero { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .c-nome { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .c-nome small { display: block; font-size: 11px; font-weight: 600; color: #6b5418; overflow: hidden; text-overflow: ellipsis; }
+    .c-bairro { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .c-data { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .c-data small { display: block; font-size: 12px; color: var(--muted); }
+    .c-valor { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .lin.fora .c-valor { color: var(--muted); text-decoration: line-through; font-weight: 600; }
+    .c-situacao .pill { padding: 4px 10px; font-size: 11.5px; white-space: nowrap; }
+    @media (max-width: 680px) {
+      .lista-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 14px; padding: 6px 12px; }
+      .lista-cab-rot { display: inline; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); }
+      .ord { padding: 7px 0; }
+      .lin {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "nome valor" "data situacao" "bairro numero";
+        gap: 4px 10px; padding: 11px 12px;
+      }
+      .c-nome { grid-area: nome; } .c-valor { grid-area: valor; }
+      .c-data { grid-area: data; font-size: 13px; color: var(--muted); }
+      .c-data small { display: inline; font-size: 13px; } .c-data small::before { content: ' · '; }
+      .c-situacao { grid-area: situacao; justify-self: end; }
+      .c-bairro { grid-area: bairro; font-size: 13px; color: var(--muted); }
+      .c-numero { grid-area: numero; font-size: 11.5px; justify-self: end; }
+    }
+
+    /* ========== PEDIDO ABERTO POR CIMA DA LISTA (v1.5) ========== */
+    .det-fundo { position: fixed; inset: 0; background: rgba(26,8,0,.55); z-index: 40; display: none; justify-content: center; align-items: flex-start; padding: 14px 12px 30px; overflow-y: auto; }
+    .det-fundo.aberto { display: flex; }
+    .det-caixa { max-width: 760px; width: 100%; }
+    .det-barra { position: sticky; top: 0; z-index: 1; display: flex; justify-content: flex-end; margin-bottom: 8px; }
+    .det-barra .btn-sec { background: var(--white); box-shadow: 0 2px 10px rgba(0,0,0,.2); }
+    .det-caixa .pedido { margin-bottom: 0; }
+
     @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   </style>
 </head>
@@ -252,7 +314,13 @@
         <h1 id="dpTitulo">Pedidos</h1>
         <p id="dpSubtitulo">Pedidos feitos pelo site para a sua região.</p>
       </div>
-      <button type="button" class="btn-atualizar" onclick="dpCarregarPedidos()">↻ Atualizar</button>
+      <div class="dp-acoes-topo">
+        <div class="modo" role="group" aria-label="Modo de exibição">
+          <button type="button" data-modo="lista">☰ Lista</button>
+          <button type="button" data-modo="cartoes">▦ Cartões</button>
+        </div>
+        <button type="button" class="btn-atualizar" onclick="dpCarregarPedidos()">↻ Atualizar</button>
+      </div>
     </div>
 
     <div class="filtros">
@@ -310,6 +378,13 @@
 
 </main>
 
+<div class="det-fundo" id="detFundo" role="dialog" aria-modal="true" aria-label="Pedido">
+  <div class="det-caixa">
+    <div class="det-barra"><button type="button" class="btn-sec" id="detFechar" onclick="dpFecharDetalhe()">✕ Fechar</button></div>
+    <div id="detConteudo"></div>
+  </div>
+</div>
+
 <div class="envio-fundo" id="envioFundo" role="dialog" aria-modal="true" aria-labelledby="envioTitulo">
   <div class="envio-caixa">
     <h3 id="envioTitulo">Enviar resumo ao cliente</h3>
@@ -336,14 +411,19 @@ var MC_TRACK_CHAVE = 'mistura-2026';
 var DP_TOKEN_KEY = 'mc_dist_token';
 var DP_EMAIL_KEY = 'mc_dist_email';
 var DP_FILTRO_KEY = 'mc_dist_filtros';
+var DP_MODO_KEY = 'mc_dist_modo';
+var DP_ORDEM_KEY = 'mc_dist_ordem';
 
 var dp = {
   perfil: null,
   pedidos: [],
-  situacoes: ['Novo', 'Em contato', 'Confirmado', 'Entregue', 'Concluído', 'Cancelado', 'Repassado à Beer Flow'],
+  situacoes: ['Novo', 'Confirmado', 'Concluído', 'Cancelado', 'Repassado à Beer Flow'],
   comissao: 0.07,
   distribuidores: [],
-  filtro: { periodo: 'proximos', situacao: 'abertos', dist: '', busca: '', de: '', ate: '' }
+  filtro: { periodo: 'proximos', situacao: 'abertos', dist: '', busca: '', de: '', ate: '' },
+  modo: 'lista',                    // 'lista' ou 'cartoes' (lembrado neste aparelho)
+  ordem: { col: '', dir: 'asc' },   // col vazia = ordem padrão (data do evento)
+  detalhe: null                     // nº do pedido aberto por cima da lista
 };
 var dpReenviarTimer = null;
 
@@ -360,6 +440,11 @@ var DP_REPASSE = 'Repassado à Beer Flow';
 // Pedido que não conta no valor nem na comissão do distribuidor.
 function dpForaDaConta(p) { return p.situacao === 'Cancelado' || p.situacao === DP_REPASSE; }
 var DP_ABERTOS = ['Novo', 'Em contato', 'Confirmado'];
+// v1.6: situações que não são mais oferecidas no painel. Pedidos antigos que estão
+// nelas continuam aparecendo (com a cor de sempre) até alguém mudar a situação.
+var DP_SITUACOES_ANTIGAS = ['Em contato', 'Entregue'];
+// Ordem completa, usada só para ordenar a coluna Situação na lista.
+var DP_ORDEM_SITUACOES = ['Novo', 'Em contato', 'Confirmado', 'Entregue', 'Concluído', 'Cancelado', 'Repassado à Beer Flow'];
 
 // ================== COMUNICAÇÃO ==================
 function dpChamar(acao, dados) {
@@ -479,6 +564,7 @@ function dpSair() {
   var token = dpLs(DP_TOKEN_KEY);
   dpLs(DP_TOKEN_KEY, null);
   if (token) dpChamar('dist_sair', { token: token }).catch(function () {});
+  dpFecharDetalhe(true);
   dp.perfil = null;
   dp.pedidos = [];
   document.getElementById('emailInput').value = dpLs(DP_EMAIL_KEY) || '';
@@ -486,6 +572,7 @@ function dpSair() {
 }
 
 function dpSessaoExpirou() {
+  dpFecharDetalhe(true);
   dpLs(DP_TOKEN_KEY, null);
   dpMsg('msgEmail', 'Sua sessão expirou. Peça um novo código para continuar.', 'err');
   document.getElementById('emailInput').value = dpLs(DP_EMAIL_KEY) || '';
@@ -506,7 +593,9 @@ function dpCarregarPedidos() {
       if (!r.ok) { dpSessaoExpirou(); return; }
       dp.perfil = r.perfil || {};
       dp.pedidos = r.pedidos || [];
-      if (r.situacoes && r.situacoes.length) dp.situacoes = r.situacoes;
+      if (r.situacoes && r.situacoes.length) {
+        dp.situacoes = r.situacoes.filter(function (s) { return DP_SITUACOES_ANTIGAS.indexOf(s) === -1; });
+      }
       if (typeof r.comissao === 'number') dp.comissao = r.comissao;
       dp.distribuidores = r.distribuidores || [];
       dpMontarCabecalho();
@@ -529,7 +618,7 @@ function dpMontarCabecalho() {
 
   // Situação
   var selS = document.getElementById('fSituacao');
-  var opcoes = [['abertos', 'Em aberto (Novo, Em contato, Confirmado)'], ['', 'Todas']]
+  var opcoes = [['abertos', 'Em aberto (Novo, Confirmado)'], ['', 'Todas']]
     .concat(dp.situacoes.map(function (s) { return [s, s]; }));
   selS.innerHTML = opcoes.map(function (o) { return '<option value="' + dpEsc(o[0]) + '">' + dpEsc(o[1]) + '</option>'; }).join('');
   selS.value = dp.filtro.situacao;
@@ -653,6 +742,9 @@ function dpRenderizar() {
     b.setAttribute('aria-pressed', b.getAttribute('data-periodo') === dp.filtro.periodo ? 'true' : 'false');
   });
   document.getElementById('periodoBox').className = 'periodo' + (dp.filtro.periodo === 'periodo' ? ' on' : '');
+  document.querySelectorAll('.modo button[data-modo]').forEach(function (b) {
+    b.setAttribute('aria-pressed', b.getAttribute('data-modo') === dp.modo ? 'true' : 'false');
+  });
 
   var lista = dpFiltrar();
   dpRenderizarResumo(lista);
@@ -668,6 +760,8 @@ function dpRenderizar() {
       '<button type="button" class="btn-sec" style="margin-top:12px;" onclick="dpLimparFiltros()">Mostrar todos os pedidos</button></div>';
     return;
   }
+
+  if (dp.modo === 'lista') { alvo.innerHTML = dpListaHtml(dpOrdenarLista(lista)); return; }
 
   var html = '';
   var grupoAtual = null;
@@ -733,7 +827,7 @@ function dpResumoItem(rotulo, valor) {
   return '<div class="resumo-item"><small>' + dpEsc(rotulo) + '</small><strong>' + dpEsc(String(valor)) + '</strong></div>';
 }
 
-function dpCardPedido(p) {
+function dpCardPedido(p, abrirResumo) {
   var cor = DP_CORES[p.situacao] || DP_CORES['Novo'];
   var id = dpIdSeguro(p.numero);
   var tel = String(p.telefone || '').replace(/\D/g, '');
@@ -745,7 +839,9 @@ function dpCardPedido(p) {
   var endereco = [p.endereco, p.bairro, p.cidade].filter(Boolean).join(' — ');
   var mapa = endereco ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent([p.endereco, p.bairro, p.cidade, p.cep].filter(Boolean).join(', ')) : '';
   var docRot = (String(p.tipoDoc || '').toLowerCase() === 'cnpj') ? 'CNPJ' : 'CPF';
-  var opcoes = dp.situacoes.map(function (s) {
+  // Pedido parado numa situação antiga: ela aparece só nele, para salvar não mudar a situação sem querer.
+  var listaSit = (p.situacao && dp.situacoes.indexOf(p.situacao) === -1) ? [p.situacao].concat(dp.situacoes) : dp.situacoes;
+  var opcoes = listaSit.map(function (s) {
     return '<option value="' + dpEsc(s) + '"' + (s === p.situacao ? ' selected' : '') + '>' + dpEsc(s) + '</option>';
   }).join('');
   var valorFinalTxt = (p.valorFinal != null) ? dpNumBr(p.valorFinal) : '';
@@ -786,7 +882,7 @@ function dpCardPedido(p) {
         (p.frete != null ? '<div style="font-size:12px;color:var(--muted);">inclui frete de ' + dpBrl(p.frete) + '</div>' : '') + '</div>' +
     '</div>' +
 
-    (p.resumo ? '<details class="resumo-pedido"><summary>Resumo completo do pedido</summary><pre>' + dpEsc(p.resumo) + '</pre></details>' : '') +
+    (p.resumo ? '<details class="resumo-pedido"' + (abrirResumo ? ' open' : '') + '><summary>Resumo completo do pedido</summary><pre>' + dpEsc(p.resumo) + '</pre></details>' : '') +
 
     '<div class="gestao">' +
       (repassado
@@ -818,6 +914,128 @@ function dpCardPedido(p) {
         : '') +
     '</div>' +
   '</article>';
+}
+
+// ================== MODO LISTA (v1.5) ==================
+var DP_COLUNAS = [
+  { col: 'numero',   rot: 'Nº pedido' },
+  { col: 'nome',     rot: 'Nome' },
+  { col: 'bairro',   rot: 'Bairro' },
+  { col: 'data',     rot: 'Data' },
+  { col: 'valor',    rot: 'Valor', num: true },
+  { col: 'situacao', rot: 'Situação' }
+];
+
+/** Valor que aparece na lista: o final cobrado, ou (sem ele) o total estimado. */
+function dpValorPedido(p) {
+  if (p.valorFinal != null) return p.valorFinal;
+  return (p.total != null) ? p.total : null;
+}
+
+/** Coluna/direção em vigor (sem escolha: data, crescente; em "Passados", decrescente). */
+function dpOrdemEfetiva() {
+  if (dp.ordem.col) return dp.ordem;
+  return { col: 'data', dir: dpIntervalo(dp.filtro.periodo).desc ? 'desc' : 'asc' };
+}
+
+function dpChaveOrdem(p, col) {
+  switch (col) {
+    case 'numero':   return String(p.numero || '');
+    case 'nome':     return dpNorm(p.nome) || '\uffff';
+    case 'bairro':   return dpNorm(p.bairro) || '\uffff';
+    case 'valor':    var v = dpValorPedido(p); return (v == null) ? -1 : Number(v);
+    case 'situacao': var i = DP_ORDEM_SITUACOES.indexOf(p.situacao); return i < 0 ? 99 : i;
+    default:         return (p.dataEvento || '9999-99-99') + ' ' + (p.horario || '');
+  }
+}
+
+function dpOrdenarLista(lista) {
+  var o = dpOrdemEfetiva();
+  var sinal = o.dir === 'desc' ? -1 : 1;
+  return lista.slice().sort(function (a, b) {
+    var x = dpChaveOrdem(a, o.col), y = dpChaveOrdem(b, o.col);
+    var c = (typeof x === 'number') ? x - y : String(x).localeCompare(String(y), 'pt-BR');
+    if (c) return c * sinal;
+    // Empate: data do evento, depois nº do pedido.
+    c = String(dpChaveOrdem(a, 'data')).localeCompare(String(dpChaveOrdem(b, 'data')));
+    return c || String(a.numero || '').localeCompare(String(b.numero || ''));
+  });
+}
+
+function dpListaHtml(lista) {
+  var o = dpOrdemEfetiva();
+  var admin = !!(dp.perfil && dp.perfil.admin);
+  var cab = '<div class="lista-cab"><span class="lista-cab-rot">Ordenar:</span>' + DP_COLUNAS.map(function (c) {
+    var ativa = o.col === c.col;
+    var seta = ativa ? (o.dir === 'asc' ? '▲' : '▼') : '';
+    var dica = 'Ordenar por ' + c.rot + (ativa ? (o.dir === 'asc' ? ' (crescente)' : ' (decrescente)') : '');
+    return '<button type="button" class="ord' + (c.num ? ' num' : '') + (ativa ? ' ativa' : '') +
+      '" data-col="' + c.col + '" aria-label="' + dpEsc(dica) + '">' + dpEsc(c.rot) +
+      '<span class="seta" aria-hidden="true">' + seta + '</span></button>';
+  }).join('') + '</div>';
+
+  var linhas = lista.map(function (p) {
+    var cor = DP_CORES[p.situacao] || DP_CORES['Novo'];
+    var data = p.dataEvento
+      ? dpEsc(dpDataCurta(p.dataEvento)) + (p.horario ? '<small>' + dpEsc(String(p.horario).replace(':', 'h')) + '</small>' : '')
+      : 'A combinar';
+    return '<button type="button" class="lin' + (dpForaDaConta(p) ? ' fora' : '') + '" style="border-left-color:' + cor.barra +
+        ';" data-numero="' + dpEsc(p.numero) + '" aria-label="Abrir pedido ' + dpEsc(p.numero) + ' de ' + dpEsc(p.nome || 'cliente') + '">' +
+      '<span class="c-numero">' + dpEsc(p.numero) + '</span>' +
+      '<span class="c-nome">' + dpEsc(p.nome || 'Cliente sem nome') +
+        (admin ? '<small>' + dpEsc(p.nomeDistribuidor || p.distribuidor || '') + '</small>' : '') + '</span>' +
+      '<span class="c-bairro">' + dpEsc(p.bairro || '—') + '</span>' +
+      '<span class="c-data">' + data + '</span>' +
+      '<span class="c-valor">' + dpEsc(dpBrl(dpValorPedido(p))) + '</span>' +
+      '<span class="c-situacao"><span class="pill" style="background:' + cor.fundo + ';color:' + cor.cor + ';">' + dpEsc(p.situacao) + '</span></span>' +
+    '</button>';
+  }).join('');
+
+  return '<div class="lista">' + cab + linhas + '</div>';
+}
+
+function dpOrdenarPor(col) {
+  var o = dpOrdemEfetiva();
+  if (o.col === col) dp.ordem = { col: col, dir: o.dir === 'asc' ? 'desc' : 'asc' };
+  else dp.ordem = { col: col, dir: col === 'valor' ? 'desc' : 'asc' };
+  dpLs(DP_ORDEM_KEY, JSON.stringify(dp.ordem));
+  dpRenderizar();
+}
+
+function dpMudarModo(modo) {
+  if (modo !== 'lista' && modo !== 'cartoes') return;
+  dpFecharDetalhe(true);
+  dp.modo = modo;
+  dpLs(DP_MODO_KEY, modo);
+  dpRenderizar();
+}
+
+// ---- pedido aberto por cima da lista ----
+function dpAbrirDetalhe(numero) {
+  var p = dp.pedidos.filter(function (x) { return x.numero === numero; })[0];
+  if (!p) return;
+  dp.detalhe = numero;
+  document.getElementById('detConteudo').innerHTML = dpCardPedido(p, true);
+  var fundo = document.getElementById('detFundo');
+  fundo.classList.add('aberto');
+  fundo.scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+  document.getElementById('detFechar').focus();
+}
+
+function dpFecharDetalhe(semFoco) {
+  var fundo = document.getElementById('detFundo');
+  if (!fundo.classList.contains('aberto')) return;
+  var numero = dp.detalhe;
+  fundo.classList.remove('aberto');
+  document.getElementById('detConteudo').innerHTML = '';  // evita IDs repetidos com os cartões
+  document.body.style.overflow = '';
+  dp.detalhe = null;
+  if (semFoco || !numero) return;
+  var linhas = document.querySelectorAll('.lin[data-numero]');
+  for (var i = 0; i < linhas.length; i++) {
+    if (linhas[i].getAttribute('data-numero') === numero) { linhas[i].focus(); break; }
+  }
 }
 
 // ================== ENVIAR RESUMO AO CLIENTE (v1.4) ==================
@@ -980,13 +1198,15 @@ function dpSalvarPedido(btn) {
       // Re-renderiza só este card (mantém a posição da tela); o resumo é recalculado.
       var card = document.getElementById('ped-' + id);
       if (card) {
+        var noDetalhe = !!(card.closest && card.closest('#detConteudo'));
         var tmp = document.createElement('div');
-        tmp.innerHTML = dpCardPedido(r.pedido);
+        tmp.innerHTML = dpCardPedido(r.pedido, noDetalhe);
         card.parentNode.replaceChild(tmp.firstChild, card);
         var m2 = document.getElementById('msg-' + id);
         if (m2) { m2.className = 'salvo-msg ok'; m2.textContent = 'Salvo ✓'; }
       }
-      dpRenderizarResumo(dpFiltrar());
+      // Na lista, a linha do pedido (situação/valor) é atualizada por trás da janela.
+      if (dp.modo === 'lista') dpRenderizar(); else dpRenderizarResumo(dpFiltrar());
     })
     .catch(function () {
       msg.className = 'salvo-msg err';
@@ -1032,6 +1252,7 @@ function dpTransferir(numero, destino, msgEl, btn, aoTerminar) {
       if (!achou) dp.pedidos.push(r.pedido);
       if (aoTerminar) aoTerminar();
       dpRenderizar();
+      if (dp.detalhe === r.pedido.numero) document.getElementById('detConteudo').innerHTML = dpCardPedido(r.pedido, true);
       var aviso = 'Pedido ' + r.pedido.numero + ' transferido para ' + (r.pedido.nomeDistribuidor || destino) + '.' +
         ((r.avisos && r.avisos.length) ? ' Atenção: ' + r.avisos.join(' ') : '');
       var cls = 'transf-msg ' + ((r.avisos && r.avisos.length) ? 'err' : 'ok');
@@ -1126,6 +1347,25 @@ function dpEsc(v) {
       if (typeof salvo.dist === 'string') dp.filtro.dist = salvo.dist;
     }
   } catch (e) { /* segue com o padrão */ }
+  var modoSalvo = dpLs(DP_MODO_KEY);
+  if (modoSalvo === 'lista' || modoSalvo === 'cartoes') dp.modo = modoSalvo;
+  try {
+    var ordemSalva = JSON.parse(dpLs(DP_ORDEM_KEY) || 'null');
+    if (ordemSalva && DP_COLUNAS.some(function (c) { return c.col === ordemSalva.col; })) {
+      dp.ordem = { col: ordemSalva.col, dir: ordemSalva.dir === 'desc' ? 'desc' : 'asc' };
+    }
+  } catch (e) { /* ordem padrão */ }
+
+  document.querySelectorAll('.modo button[data-modo]').forEach(function (b) {
+    b.addEventListener('click', function () { dpMudarModo(b.getAttribute('data-modo')); });
+  });
+  document.getElementById('listaPedidos').addEventListener('click', function (e) {
+    var ord = e.target.closest('.ord[data-col]');
+    if (ord) { dpOrdenarPor(ord.getAttribute('data-col')); return; }
+    var lin = e.target.closest('.lin[data-numero]');
+    if (lin) dpAbrirDetalhe(lin.getAttribute('data-numero'));
+  });
+  document.getElementById('detFundo').addEventListener('click', function (e) { if (e.target === this) dpFecharDetalhe(); });
 
   document.querySelectorAll('.chip[data-periodo]').forEach(function (b) {
     b.addEventListener('click', function () {
@@ -1149,7 +1389,12 @@ function dpEsc(v) {
   });
   document.getElementById('envioOcultar').addEventListener('change', dpAplicarOcultar);
   document.getElementById('envioFundo').addEventListener('click', function (e) { if (e.target === this) dpFecharEnvio(); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') dpFecharEnvio(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    // Fecha só a janela de cima: primeiro o envio do resumo, depois o pedido.
+    if (document.getElementById('envioFundo').classList.contains('aberto')) dpFecharEnvio();
+    else dpFecharDetalhe();
+  });
   document.getElementById('emailInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') dpSolicitarCodigo(); });
   document.getElementById('codigoInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') dpValidarCodigo(); });
 
