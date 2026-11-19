@@ -1731,6 +1731,8 @@
       <span class="value" id="resumo-total">R$ 0,00</span>
     </div>
 
+    <div id="resumo-cashback-ganho" style="display:none;margin-top:10px;padding:12px 14px;border-radius:10px;background:#E8F5EC;border:1px solid #BFE0C9;color:#1E6B3C;font-weight:700;font-size:14px;text-align:center;line-height:1.4;"></div>
+
     <div style="margin-top:10px;">
       <div class="info-box">
         ℹ️ Todos os produtos exceto o Pilsen estão sujeitos à disponibilidade e serão confirmados pelo atendente no WhatsApp.
@@ -3785,6 +3787,22 @@ function mcRenderCashbackResumo() {
     '<div style="font-size:12px;color:var(--muted);margin-top:6px;">Cashback de 5% do seu último pedido, aplicado automaticamente. Este pedido, quando pago, gera um novo cashback para a próxima vez.</div>';
 }
 
+// Aviso no resumo: quanto este pedido vai gerar de cashback (13 meses).
+// Mesma regra do Cashback.gs: 5% do que o cliente PAGA pelo pedido inteiro.
+// Como a forma de pagamento só é escolhida depois do resumo, mostramos o
+// valor do PIX integral (já com 3% de desconto) — o menor possível; sinal
+// de 50% ou pagamento por fora geram 5% do total cheio (um pouco mais).
+function mcRenderCashbackGanho() {
+  var el = document.getElementById('resumo-cashback-ganho');
+  if (!el) return;
+  if (!mcCbAtivo()) { el.style.display = 'none'; return; }
+  var basePix = Math.round(calcTotal() * (1 - MC_DESCONTO_PIX_INTEGRAL) * 100) / 100;
+  var ganho = Math.round(basePix * 5) / 100; // 5%, arredondado como o Cashback.gs
+  if (!(ganho > 0)) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.textContent = '\uD83D\uDCB0 Você ganhou ' + fmt(ganho) + ' em cashback! (válido por 13 meses)';
+}
+
 function updateBeerSubtotal() {
   var nb = calcFreeCups();
   var fc = document.getElementById('cups-free-count');
@@ -4914,6 +4932,7 @@ function buildResumo() {
 
   // Cashback + Total
   mcRenderCashbackResumo();
+  mcRenderCashbackGanho();
   const total = calcTotal();
   document.getElementById('resumo-total').textContent = fmt(total);
 }
