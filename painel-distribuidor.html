@@ -372,7 +372,8 @@
 
     <p class="dp-rodape">
       Os dados dos clientes são para atender o pedido e para o relacionamento com quem você atendeu, conforme o contrato com a Beer Flow. Não repasse a terceiros.<br>
-      Comissão de <span id="dpComissaoPct">7%</span> sobre o valor final (ou, sem ele, sobre o total estimado). Pedidos cancelados não geram comissão.
+      Comissão de <span id="dpComissaoPct">7%</span> sobre o valor final (ou, sem ele, sobre o total estimado, já com o cashback descontado). Pedidos cancelados não geram comissão.<br>
+      Cashback: 5% do total de cada pedido seu fica para o cliente usar no próximo pedido com você (13 meses), liberado quando você marca <b>Concluído</b>.
     </p>
   </section>
 
@@ -879,7 +880,8 @@ function dpCardPedido(p, abrirResumo) {
       dpCampo('Itens', p.itens) +
       dpCampo('Entrega', p.entrega) +
       '<div class="campo"><small>Total estimado</small><div class="valor-grande">' + dpBrl(p.total) + '</div>' +
-        (p.frete != null ? '<div style="font-size:12px;color:var(--muted);">inclui frete de ' + dpBrl(p.frete) + '</div>' : '') + '</div>' +
+        (p.frete != null ? '<div style="font-size:12px;color:var(--muted);">inclui frete de ' + dpBrl(p.frete) + '</div>' : '') +
+        (p.cashbackUsado > 0 ? '<div style="font-size:12px;color:#1E6B3C;font-weight:700;">já com cashback de ' + dpBrl(p.cashbackUsado) + ' descontado</div>' : '') + '</div>' +
     '</div>' +
 
     (p.resumo ? '<details class="resumo-pedido"' + (abrirResumo ? ' open' : '') + '><summary>Resumo completo do pedido</summary><pre>' + dpEsc(p.resumo) + '</pre></details>' : '') +

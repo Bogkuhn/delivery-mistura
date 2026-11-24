@@ -3663,7 +3663,11 @@ function calcTotalBruto() {
 //  O saldo vem do Apps Script (ação 'cashback_consultar', Cashback.gs) ao
 //  sair da etapa de dados, e só se o e-mail OU o telefone bater com um
 //  pedido anterior do mesmo CPF/CNPJ. É aplicado INTEIRO neste pedido
-//  (até o valor do pedido). Pedidos de distribuidor: sem cashback.
+//  (até o valor do pedido).
+//  v2.0 (24/11/2026): DISTRIBUIDORES também. Carteiras separadas: o site
+//  pergunta o saldo da carteira de quem atende (order.distribuidor), e só
+//  aplica o saldo se ele for dessa carteira. O total já sai descontado
+//  (resumo, planilha, e-mails e painel do distribuidor).
 //  No resumo vai a linha "CASHBACK (pedido X): -R$ Y", que o BeerSales.gs
 //  lê como desconto; o valor usado vai em 'cashback_usado'.
 // ============================================================
@@ -3674,8 +3678,13 @@ function calcTotalBruto() {
 var MC_CASHBACK_TIMEOUT_MS = 20000;
 var mcCb = { chave: '', estado: '', resp: null, esperando: [] }; // estado: pendente | ok | erro
 
+function mcCbCarteira() {
+  return order.distribuidor || MC_DIST_PADRAO;
+}
+
 function calcCashbackAplicado() {
-  if (!order.cashback || !(order.cashback.valor > 0) || mcEhDistribuidor()) return 0;
+  if (!order.cashback || !(order.cashback.valor > 0)) return 0;
+  if (order.cashback.carteira !== mcCbCarteira()) return 0; // saldo é de outro atendente
   return Math.round(Math.min(order.cashback.valor, calcTotalBruto()) * 100) / 100;
 }
 
@@ -3687,13 +3696,14 @@ function mcCbDados(doc, email, tel) {
   doc = String(doc || '').replace(/\D/g, '');
   email = String(email || '').trim().toLowerCase();
   tel = String(tel || '').replace(/\D/g, '');
+  var cart = mcCbCarteira();
   var docOk = doc.length === 11 || doc.length === 14;
   var contatoOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || tel.length >= 10;
-  return { ok: docOk && contatoOk, chave: doc + '|' + email + '|' + tel, doc: doc, email: email, tel: tel };
+  return { ok: docOk && contatoOk, chave: doc + '|' + email + '|' + tel + '|' + cart, doc: doc, email: email, tel: tel, carteira: cart };
 }
 
 function mcCbAtivo() {
-  return !mcEhDistribuidor() && !!MC_TRACK_URL && MC_TRACK_URL.indexOf('COLE_AQUI') !== 0;
+  return !!MC_TRACK_URL && MC_TRACK_URL.indexOf('COLE_AQUI') !== 0;
 }
 
 function mcCbDisparar(dados) {
@@ -3710,7 +3720,7 @@ function mcCbDisparar(dados) {
   fetch(MC_TRACK_URL, {
     method: 'POST',
     body: JSON.stringify({ chave: MC_TRACK_CHAVE, acao: 'cashback_consultar',
-      dados: { documento: dados.doc, email: dados.email, telefone: dados.tel } }),
+      dados: { documento: dados.doc, email: dados.email, telefone: dados.tel, distribuidor: dados.carteira } }),
     headers: { 'Content-Type': 'text/plain;charset=utf-8' }
   })
     .then(function (r) { return r.json(); })
@@ -3751,7 +3761,7 @@ function mcConsultarCashback(seguir) {
     if (mcCb.estado === 'ok') {
       var r = mcCb.resp || {};
       order.cashback = Number(r.valor) > 0
-        ? { valor: Number(r.valor), validade: r.validade || '', origem: r.origem || '' }
+        ? { valor: Number(r.valor), validade: r.validade || '', origem: r.origem || '', carteira: dados.carteira }
         : null;
     }
     // 'erro' ou demorou demais: segue sem cashback (o pedido não trava).
@@ -3784,7 +3794,8 @@ function mcRenderCashbackResumo() {
   var cb = order.cashback;
   document.getElementById('resumo-cashback').innerHTML =
     resumoItem('Saldo do pedido ' + (cb.origem || 'anterior') + (cb.validade ? ' (válido até ' + cb.validade + ')' : ''), '\u2212' + fmt(v)) +
-    '<div style="font-size:12px;color:var(--muted);margin-top:6px;">Cashback de 5% do seu último pedido, aplicado automaticamente. Este pedido, quando pago, gera um novo cashback para a próxima vez.</div>';
+    '<div style="font-size:12px;color:var(--muted);margin-top:6px;">Cashback de 5% do seu último pedido, aplicado automaticamente e já descontado do total. Este pedido, quando ' +
+    (mcEhDistribuidor() ? 'concluído' : 'pago') + ', gera um novo cashback para a próxima vez.</div>';
 }
 
 // Aviso no resumo: quanto este pedido vai gerar de cashback (13 meses).
@@ -3792,15 +3803,19 @@ function mcRenderCashbackResumo() {
 // Como a forma de pagamento só é escolhida depois do resumo, mostramos o
 // valor do PIX integral (já com 3% de desconto) — o menor possível; sinal
 // de 50% ou pagamento por fora geram 5% do total cheio (um pouco mais).
+// Distribuidor (v2.0): base = total do pedido (o pagamento é combinado com
+// ele, sem o desconto do PIX do site), e o cashback vale só com ele.
 function mcRenderCashbackGanho() {
   var el = document.getElementById('resumo-cashback-ganho');
   if (!el) return;
   if (!mcCbAtivo()) { el.style.display = 'none'; return; }
-  var basePix = Math.round(calcTotal() * (1 - MC_DESCONTO_PIX_INTEGRAL) * 100) / 100;
-  var ganho = Math.round(basePix * 5) / 100; // 5%, arredondado como o Cashback.gs
+  var dist = mcEhDistribuidor();
+  var base = dist ? calcTotal() : Math.round(calcTotal() * (1 - MC_DESCONTO_PIX_INTEGRAL) * 100) / 100;
+  var ganho = Math.round(base * 5) / 100; // 5%, arredondado como o Cashback.gs
   if (!(ganho > 0)) { el.style.display = 'none'; return; }
   el.style.display = 'block';
-  el.textContent = '\uD83D\uDCB0 Você ganhou ' + fmt(ganho) + ' em cashback! (válido por 13 meses)';
+  el.textContent = '\uD83D\uDCB0 Você ganhou ' + fmt(ganho) + ' em cashback! (válido por 13 meses' +
+    (dist && order.distribuidorNome ? ' em pedidos com ' + order.distribuidorNome : '') + ')';
 }
 
 function updateBeerSubtotal() {

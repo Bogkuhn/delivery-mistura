@@ -478,9 +478,12 @@ function pnlRenderizarCashback(lista) {
   var varios = lista.length > 1;
   area.innerHTML = lista.map(function (c) {
     return '<section class="cashback" aria-label="Cashback">' +
-      '<div class="cashback-titulo">💰 Seu cashback' + (varios ? ' — documento ' + pnlEsc(c.doc) : '') + '</div>' +
+      '<div class="cashback-titulo">💰 Seu cashback' + (c.nomeCarteira ? ' — ' + pnlEsc(c.nomeCarteira) : '') +
+        (varios ? ' — documento ' + pnlEsc(c.doc) : '') + '</div>' +
       '<div class="cashback-valor">' + pnlBrl(c.valor) + '</div>' +
-      '<div class="cashback-texto">Desconto aplicado automaticamente no seu próximo pedido pelo site (5% do pedido ' + pnlEsc(c.origem) + ').</div>' +
+      '<div class="cashback-texto">Desconto aplicado automaticamente no seu próximo pedido pelo site' +
+        (c.nomeCarteira ? ' atendido por <strong>' + pnlEsc(c.nomeCarteira) + '</strong>' : ' atendido pela Mistura Clássica') +
+        ' (5% do pedido ' + pnlEsc(c.origem) + ').</div>' +
       '<div class="cashback-texto">Válido até <strong>' + pnlEsc(pnlDataBr(c.validade)) + '</strong>. Use o mesmo CPF/CNPJ e o mesmo e-mail ou telefone.</div>' +
     '</section>';
   }).join('');
