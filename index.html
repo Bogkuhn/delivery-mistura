@@ -1726,6 +1726,11 @@
       <div id="resumo-cashback"></div>
     </div>
 
+    <div class="summary-section" id="resumo-credito-section" style="display:none;">
+      <div class="summary-section-title" style="color:#1E6B3C;">🎟️ Crédito</div>
+      <div id="resumo-credito"></div>
+    </div>
+
     <div class="total-final">
       <span class="label">Total Estimado do Pedido</span>
       <span class="value" id="resumo-total">R$ 0,00</span>
@@ -3566,6 +3571,7 @@ function pagamentoOnlineDisponivel() {
   if (pedidoTemBarrilPequeno()) return false;
   if (dataDePagamentoBloqueada(order.eventDate)) return false;
   if (pagamentoBloqueadoPorAntecedencia(order.eventDate)) return false;
+  if (!(calcTotal() > 0)) return false; // crédito/cashback zeraram o pedido: nada a cobrar no site
   return true;
 }
 
@@ -3688,8 +3694,22 @@ function calcCashbackAplicado() {
   return Math.round(Math.min(order.cashback.valor, calcTotalBruto()) * 100) / 100;
 }
 
+// CRÉDITO DO CLIENTE (24/11/2026, Cashback.gs v2.1): crédito lançado num
+// pedido anterior (ex.: barril devolvido lacrado), sem validade, só com quem
+// atendeu (mesma carteira do cashback). Vem na mesma consulta do cashback e
+// entra DEPOIS dele, até zerar o pedido. No resumo vai a linha
+// "CRÉDITO (pedido X): -R$ Y" (o BeerSales.gs lê como desconto); o valor
+// usado vai em 'credito_usado'.
+function calcCreditoAplicado() {
+  if (!order.credito || !(order.credito.valor > 0)) return 0;
+  if (order.credito.carteira !== mcCbCarteira()) return 0; // crédito é de outro atendente
+  var resta = calcTotalBruto() - calcCashbackAplicado();
+  if (!(resta > 0)) return 0;
+  return Math.round(Math.min(order.credito.valor, resta) * 100) / 100;
+}
+
 function calcTotal() {
-  return Math.round((calcTotalBruto() - calcCashbackAplicado()) * 100) / 100;
+  return Math.round((calcTotalBruto() - calcCashbackAplicado() - calcCreditoAplicado()) * 100) / 100;
 }
 
 function mcCbDados(doc, email, tel) {
@@ -3754,7 +3774,7 @@ function mcPreConsultarCashback() {
 function mcConsultarCashback(seguir) {
   if (!mcCbAtivo()) { seguir(); return; }
   var dados = mcCbDados(order.documento, order.email, order.telefone);
-  if (!dados.ok) { order.cashback = null; seguir(); return; }
+  if (!dados.ok) { order.cashback = null; order.credito = null; seguir(); return; }
 
   var aplicar = function () {
     if (mcCb.chave !== dados.chave) return;
@@ -3763,11 +3783,14 @@ function mcConsultarCashback(seguir) {
       order.cashback = Number(r.valor) > 0
         ? { valor: Number(r.valor), validade: r.validade || '', origem: r.origem || '', carteira: dados.carteira }
         : null;
+      order.credito = Number(r.credito) > 0
+        ? { valor: Number(r.credito), origem: r.creditoOrigem || '', carteira: dados.carteira }
+        : null;
     }
     // 'erro' ou demorou demais: segue sem cashback (o pedido não trava).
   };
 
-  if (mcCb.chave !== dados.chave || mcCb.estado === 'erro') { order.cashback = null; mcCbDisparar(dados); }
+  if (mcCb.chave !== dados.chave || mcCb.estado === 'erro') { order.cashback = null; order.credito = null; mcCbDisparar(dados); }
   if (mcCb.estado === 'ok') { aplicar(); seguir(); return; }
 
   var btn = document.getElementById('btn-dados-continuar');
@@ -3796,6 +3819,20 @@ function mcRenderCashbackResumo() {
     resumoItem('Saldo do pedido ' + (cb.origem || 'anterior') + (cb.validade ? ' (válido até ' + cb.validade + ')' : ''), '\u2212' + fmt(v)) +
     '<div style="font-size:12px;color:var(--muted);margin-top:6px;">Cashback de 5% do seu último pedido, aplicado automaticamente e já descontado do total. Este pedido, quando ' +
     (mcEhDistribuidor() ? 'concluído' : 'pago') + ', gera um novo cashback para a próxima vez.</div>';
+}
+
+function mcRenderCreditoResumo() {
+  var sec = document.getElementById('resumo-credito-section');
+  if (!sec) return;
+  var v = calcCreditoAplicado();
+  if (!(v > 0)) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  var cr = order.credito;
+  var sobra = Math.round((cr.valor - v) * 100) / 100;
+  document.getElementById('resumo-credito').innerHTML =
+    resumoItem('Crédito do pedido ' + (cr.origem || 'anterior'), '\u2212' + fmt(v)) +
+    '<div style="font-size:12px;color:var(--muted);margin-top:6px;">Crédito que ficou com você num pedido anterior, aplicado automaticamente e já descontado do total.' +
+    (sobra > 0 ? ' Sobra ' + fmt(sobra) + ' de crédito para o próximo pedido.' : '') + '</div>';
 }
 
 // Aviso no resumo: quanto este pedido vai gerar de cashback (13 meses).
@@ -4947,6 +4984,7 @@ function buildResumo() {
 
   // Cashback + Total
   mcRenderCashbackResumo();
+  mcRenderCreditoResumo();
   mcRenderCashbackGanho();
   const total = calcTotal();
   document.getElementById('resumo-total').textContent = fmt(total);
@@ -5187,6 +5225,8 @@ function montarResumoCompleto() {
   if (order.freteExtra > 0) L.push('FRETE: ' + fmt(order.freteExtra) + ' (bairro: ' + order.bairro + ')');
   var cbUsado = calcCashbackAplicado();
   if (cbUsado > 0) L.push('CASHBACK (pedido ' + (order.cashback.origem || 'anterior') + '): -' + fmt(cbUsado));
+  var crUsado = calcCreditoAplicado();
+  if (crUsado > 0) L.push('CRÉDITO (pedido ' + (order.credito.origem || 'anterior') + '): -' + fmt(crUsado));
   L.push('PAGAMENTO: ' + mcTextoPagamento());
   L.push('TOTAL ESTIMADO: ' + fmt(total));
 
@@ -5300,7 +5340,9 @@ function registrarPedido(origem) {
         // Cliente da casa (link ?c=): o backend confere o código na aba "Clientes Beer Flow"
         cliente_casa: mcClienteCasa || '',
         // Cashback (Cashback.gs): quanto do saldo foi usado neste pedido
-        cashback_usado: calcCashbackAplicado()
+        cashback_usado: calcCashbackAplicado(),
+        // Crédito do cliente (Cashback.gs v2.1): quanto do crédito foi usado neste pedido
+        credito_usado: calcCreditoAplicado()
       });
     } catch (e) { /* nunca interrompe a navegacao */ }
   }

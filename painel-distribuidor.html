@@ -373,7 +373,8 @@
     <p class="dp-rodape">
       Os dados dos clientes são para atender o pedido e para o relacionamento com quem você atendeu, conforme o contrato com a Beer Flow. Não repasse a terceiros.<br>
       Comissão de <span id="dpComissaoPct">7%</span> sobre o valor final (ou, sem ele, sobre o total estimado, já com o cashback descontado). Pedidos cancelados não geram comissão.<br>
-      Cashback: 5% do total de cada pedido seu fica para o cliente usar no próximo pedido com você (13 meses), liberado quando você marca <b>Concluído</b>.
+      Cashback: 5% do total de cada pedido seu fica para o cliente usar no próximo pedido com você (13 meses), liberado quando você marca <b>Concluído</b>.<br>
+      Crédito: se o cliente ficou com saldo (ex.: barril devolvido lacrado), informe o valor em <b>Crédito para o cliente</b> e salve. Ele é descontado sozinho no próximo pedido do cliente com você, sem validade.
     </p>
   </section>
 
@@ -881,7 +882,8 @@ function dpCardPedido(p, abrirResumo) {
       dpCampo('Entrega', p.entrega) +
       '<div class="campo"><small>Total estimado</small><div class="valor-grande">' + dpBrl(p.total) + '</div>' +
         (p.frete != null ? '<div style="font-size:12px;color:var(--muted);">inclui frete de ' + dpBrl(p.frete) + '</div>' : '') +
-        (p.cashbackUsado > 0 ? '<div style="font-size:12px;color:#1E6B3C;font-weight:700;">já com cashback de ' + dpBrl(p.cashbackUsado) + ' descontado</div>' : '') + '</div>' +
+        (p.cashbackUsado > 0 ? '<div style="font-size:12px;color:#1E6B3C;font-weight:700;">já com cashback de ' + dpBrl(p.cashbackUsado) + ' descontado</div>' : '') +
+        (p.creditoUsado > 0 ? '<div style="font-size:12px;color:#1E6B3C;font-weight:700;">já com crédito de ' + dpBrl(p.creditoUsado) + ' descontado</div>' : '') + '</div>' +
     '</div>' +
 
     (p.resumo ? '<details class="resumo-pedido"' + (abrirResumo ? ' open' : '') + '><summary>Resumo completo do pedido</summary><pre>' + dpEsc(p.resumo) + '</pre></details>' : '') +
@@ -897,6 +899,9 @@ function dpCardPedido(p, abrirResumo) {
         '<div><label class="form-label" for="vf-' + id + '">Valor final cobrado (R$)</label>' +
           '<input class="form-input" id="vf-' + id + '" inputmode="decimal" placeholder="' + dpEsc(p.total != null ? dpNumBr(p.total) : '0,00') + '" value="' + dpEsc(valorFinalTxt) + '"></div>' +
       '</div>' +
+      '<div style="margin-top:10px;"><label class="form-label" for="cr-' + id + '">Crédito para o cliente (R$)</label>' +
+        '<input class="form-input" id="cr-' + id + '" inputmode="decimal" placeholder="0,00" value="' + dpEsc(p.credito != null && p.credito > 0 ? dpNumBr(p.credito) : '') + '">' +
+        '<div style="font-size:12px;color:var(--muted);margin-top:4px;">Descontado sozinho no próximo pedido do cliente com você, sem validade. Deixe em branco se não houver.</div></div>' +
       '<div style="margin-top:10px;"><label class="form-label" for="obs-' + id + '">Observação interna</label>' +
         '<textarea class="form-textarea" id="obs-' + id + '" maxlength="500" placeholder="Ex.: pagou sinal no PIX, entrega às 10h…">' + dpEsc(p.obs || '') + '</textarea></div>' +
       (p.historico ? '<div class="historico">' + dpEsc(p.historico) + '</div>' : '') +
@@ -1156,11 +1161,18 @@ function dpSalvarPedido(btn) {
   var situacao = document.getElementById('sit-' + id).value;
   var valorFinal = document.getElementById('vf-' + id).value.trim();
   var obs = document.getElementById('obs-' + id).value;
+  var crEl = document.getElementById('cr-' + id);
+  var credito = crEl ? crEl.value.trim() : '';
   var msg = document.getElementById('msg-' + id);
 
   if (valorFinal && !/^[\d.,\s]+$/.test(valorFinal.replace(/^R\$\s*/i, ''))) {
     msg.className = 'salvo-msg err';
     msg.textContent = 'Valor final inválido.';
+    return;
+  }
+  if (credito && !/^[\d.,\s]+$/.test(credito.replace(/^R\$\s*/i, ''))) {
+    msg.className = 'salvo-msg err';
+    msg.textContent = 'Crédito inválido.';
     return;
   }
 
@@ -1178,13 +1190,15 @@ function dpSalvarPedido(btn) {
   msg.textContent = '';
 
   dpChamar('dist_atualizar_pedido', {
-    token: dpLs(DP_TOKEN_KEY), numero: numero, situacao: situacao, valorFinal: valorFinal, obs: obs
+    token: dpLs(DP_TOKEN_KEY), numero: numero, situacao: situacao, valorFinal: valorFinal, obs: obs, credito: credito
   })
     .then(function (r) {
       if (!r.ok) {
         if (r.erro === 'sessao_invalida') { dpSessaoExpirou(); return; }
         var erros = {
           valor_invalido: 'Valor final inválido.',
+          credito_invalido: 'Crédito inválido.',
+          credito_maior_que_pedido: 'O crédito não pode passar do valor do pedido.',
           situacao_invalida: 'Situação inválida.',
           pedido_nao_encontrado: 'Pedido não encontrado.',
           pedido_repassado: 'Este pedido já foi repassado à Beer Flow.',

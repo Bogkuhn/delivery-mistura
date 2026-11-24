@@ -220,6 +220,7 @@
       <p>Aqui você acompanha a situação de cada pedido feito com esse e-mail.</p>
     </div>
     <div id="areaCashback"></div>
+    <div id="areaCredito"></div>
     <div id="listaPedidos"></div>
   </section>
 
@@ -414,6 +415,7 @@ function pnlCarregarPedidos() {
       }
       document.getElementById('pnlEmailLogado').textContent = r.email;
       pnlRenderizarCashback(r.cashback || []);
+      pnlRenderizarCredito(r.credito || []);
       pnlRenderizarPedidos(r.pedidos || []);
     })
     .catch(function () {
@@ -485,6 +487,24 @@ function pnlRenderizarCashback(lista) {
         (c.nomeCarteira ? ' atendido por <strong>' + pnlEsc(c.nomeCarteira) + '</strong>' : ' atendido pela Mistura Clássica') +
         ' (5% do pedido ' + pnlEsc(c.origem) + ').</div>' +
       '<div class="cashback-texto">Válido até <strong>' + pnlEsc(pnlDataBr(c.validade)) + '</strong>. Use o mesmo CPF/CNPJ e o mesmo e-mail ou telefone.</div>' +
+    '</section>';
+  }).join('');
+}
+
+// ================== CRÉDITO (barril devolvido etc.) ==================
+function pnlRenderizarCredito(lista) {
+  var area = document.getElementById('areaCredito');
+  if (!area) return;
+  if (!lista.length) { area.innerHTML = ''; return; }
+  var varios = lista.length > 1;
+  area.innerHTML = lista.map(function (c) {
+    return '<section class="cashback" aria-label="Crédito">' +
+      '<div class="cashback-titulo">🎟️ Seu crédito' + (c.nomeCarteira ? ' — ' + pnlEsc(c.nomeCarteira) : '') +
+        (varios ? ' — documento ' + pnlEsc(c.doc) : '') + '</div>' +
+      '<div class="cashback-valor">' + pnlBrl(c.valor) + '</div>' +
+      '<div class="cashback-texto">Crédito do pedido ' + pnlEsc(c.origem) + ', descontado automaticamente no seu próximo pedido pelo site' +
+        (c.nomeCarteira ? ' atendido por <strong>' + pnlEsc(c.nomeCarteira) + '</strong>' : ' atendido pela Mistura Clássica') + '.</div>' +
+      '<div class="cashback-texto">Não tem validade. Use o mesmo CPF/CNPJ e o mesmo e-mail ou telefone.</div>' +
     '</section>';
   }).join('');
 }
