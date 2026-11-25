@@ -2075,7 +2075,19 @@ function mcTrack(evento, dados) {
       url: location.href,
       dados: dados || {}
     });
-    if (navigator.sendBeacon) {
+    // pedido_enviado vai por fetch (keepalive), não por sendBeacon (25/11/2026):
+    // alguns navegadores, bloqueadores e redes de empresa descartam beacons em
+    // silêncio — caso real MC-261124-2219 (AEPE), pago e fora da planilha. Se o
+    // fetch falhar, tenta o beacon. Chegar duas vezes não duplica: o backend
+    // ignora o segundo "pedido_enviado" do mesmo número.
+    if (evento === 'pedido_enviado' && window.fetch) {
+      fetch(MC_TRACK_URL, { method: 'POST', body: payload, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, keepalive: true })
+        .catch(function() {
+          try {
+            if (navigator.sendBeacon) navigator.sendBeacon(MC_TRACK_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
+          } catch (e2) { /* nada */ }
+        });
+    } else if (navigator.sendBeacon) {
       navigator.sendBeacon(MC_TRACK_URL, new Blob([payload], { type: 'text/plain;charset=UTF-8' }));
     } else {
       fetch(MC_TRACK_URL, { method: 'POST', body: payload, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, keepalive: true }).catch(function(){});
@@ -5299,7 +5311,7 @@ function registrarPedido(origem) {
       // Google Ads: elo de clique (gclid) para o upload de conversao offline "Pedido Pago".
       // So existe se o cliente aceitou os cookies (persistido em _mc_gclid no aceite).
       var __gclid = obterGclid();
-      mcTrack('pedido_enviado', {
+      var __dadosPedido = {
         numero_pedido: order.numeroPedido || '',
         origem: origem || '',
         resumo: (typeof montarResumoCompleto === 'function') ? montarResumoCompleto() : '',
@@ -5343,7 +5355,11 @@ function registrarPedido(origem) {
         cashback_usado: calcCashbackAplicado(),
         // Crédito do cliente (Cashback.gs v2.1): quanto do crédito foi usado neste pedido
         credito_usado: calcCreditoAplicado()
-      });
+      };
+      // Guarda o registro para reenviar junto com o pedido de cobrança
+      // (rede de segurança no backend, caso este registro não chegue).
+      order.__registroEnvio = { pagina: MC_PAGINA, url: location.href, dados: __dadosPedido };
+      mcTrack('pedido_enviado', __dadosPedido);
     } catch (e) { /* nunca interrompe a navegacao */ }
   }
 
@@ -5481,7 +5497,11 @@ function confirmarPagamento() {
       valor: calcularValorPagamentoFinal(),
       numeroPedido: order.numeroPedido || '',
       formaPagamento: mcFormaPagamentoFinal,
-      tipoParcela: mcParcelaFinal
+      tipoParcela: mcParcelaFinal,
+      // Rede de segurança (25/11/2026): o pedido completo vai junto. Se o
+      // registro do pedido não tiver chegado à planilha, o backend registra
+      // a partir daqui (ver _registrarPedidoDeReserva_ no Code.gs).
+      pedido: order.__registroEnvio || null
     }
   };
 
